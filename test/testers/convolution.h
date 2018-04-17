@@ -1,13 +1,13 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdlib>
-
 #include <algorithm>
 #include <cfloat>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
+#include <cstdlib>
 #include <functional>
+#include <iostream>
 #include <random>
 #include <vector>
 
@@ -481,15 +481,14 @@ class ConvolutionTester {
       enum nnp_activation activation = nnp_activation_identity,
       bool precompute = false) const {
     ASSERT_EQ(1, batchSize());
-
     const uint_fast32_t seed =
         std::chrono::system_clock::now().time_since_epoch().count();
     auto rng = std::bind(std::uniform_real_distribution<float>(-0.1, 1.0),
                          std::mt19937(seed));
 
     std::vector<float> input(inputChannels() * inputHeight() * inputWidth());
-    std::vector<float> kernel(outputChannels() * inputChannels() *
-                              kernelHeight() * kernelWidth());
+    std::vector<float> kernel(outputChannels() * kernelHeight() *
+                              kernelWidth());
 
     std::vector<float> bias(outputChannels());
 
@@ -499,14 +498,16 @@ class ConvolutionTester {
                                        outputWidth());
 
     size_t scratchSize = 0;
-    enum nnp_status status = nnp_convolution_depthwise_inference(
-        algorithm,
-        precompute ? nnp_convolution_transform_strategy_reuse
-                   : nnp_convolution_transform_strategy_compute,
-        inputChannels(), outputChannels(), inputSize(), inputPadding(),
-        kernelSize(), outputSubsampling(), nullptr, nullptr, nullptr, nullptr,
-        nullptr, &scratchSize, activation, nullptr, this->threadpool, nullptr);
-    ASSERT_EQ(nnp_status_success, status);
+    // enum nnp_status status = nnp_convolution_depthwise_inference(
+    //     algorithm,
+    //     precompute ? nnp_convolution_transform_strategy_reuse
+    //                : nnp_convolution_transform_strategy_compute,
+    //     inputChannels(), outputChannels(), inputSize(), inputPadding(),
+    //     kernelSize(), outputSubsampling(), nullptr, nullptr, nullptr,
+    //     nullptr, nullptr, &scratchSize, activation, nullptr,
+    //     this->threadpool, nullptr);
+    // ASSERT_EQ(nnp_status_success, status);
+    // std::cerr << "ok\n";
 
     std::vector<uint8_t, AlignedAllocator<uint8_t, 64>> scratchBuffer(
         scratchSize);
@@ -538,34 +539,35 @@ class ConvolutionTester {
           FAIL() << "Unexpected activation value: " << activation;
       }
 
-      std::vector<uint8_t, AlignedAllocator<uint8_t, 64>> transformedKernel;
-
-      if (precompute) {
-        size_t transformedKernelSize = 0;
-        enum nnp_status status = nnp_convolution_inference(
-            algorithm, nnp_convolution_transform_strategy_precompute,
-            inputChannels(), outputChannels(), inputSize(), inputPadding(),
-            kernelSize(), outputSubsampling(), nullptr, nullptr, nullptr,
-            nullptr, nullptr, &transformedKernelSize, activation, nullptr,
-            threadpool, nullptr);
-        ASSERT_EQ(nnp_status_success, status);
-
-        transformedKernel.resize(transformedKernelSize);
-
-        status = nnp_convolution_inference(
-            algorithm, nnp_convolution_transform_strategy_precompute,
-            inputChannels(), outputChannels(), inputSize(), inputPadding(),
-            kernelSize(), outputSubsampling(), nullptr, kernel.data(), nullptr,
-            nullptr, transformedKernel.data(), &transformedKernelSize,
-            activation, nullptr, threadpool, nullptr);
-        ASSERT_EQ(nnp_status_success, status);
-      }
-
+      // std::vector<uint8_t, AlignedAllocator<uint8_t, 64>> transformedKernel;
+      //
+      // if (precompute) {
+      //   size_t transformedKernelSize = 0;
+      //   enum nnp_status status = nnp_convolution_depthwise_inference(
+      //       algorithm, nnp_convolution_transform_strategy_precompute,
+      //       inputChannels(), outputChannels(), inputSize(), inputPadding(),
+      //       kernelSize(), outputSubsampling(), nullptr, nullptr, nullptr,
+      //       nullptr, nullptr, &transformedKernelSize, activation, nullptr,
+      //       threadpool, nullptr);
+      //   ASSERT_EQ(nnp_status_success, status);
+      //
+      //   transformedKernel.resize(transformedKernelSize);
+      //
+      //   status = nnp_convolution_depthwise_inference(
+      //       algorithm, nnp_convolution_transform_strategy_precompute,
+      //       inputChannels(), outputChannels(), inputSize(), inputPadding(),
+      //       kernelSize(), outputSubsampling(), nullptr, kernel.data(),
+      //       nullptr, nullptr, transformedKernel.data(),
+      //       &transformedKernelSize, activation, nullptr, threadpool,
+      //       nullptr);
+      //   ASSERT_EQ(nnp_status_success, status);
+      // }
+      //
       const void* kernelData = kernel.data();
-      if (precompute) {
-        kernelData = transformedKernel.data();
-      }
-      enum nnp_status status = nnp_convolution_inference(
+      // if (precompute) {
+      //   kernelData = transformedKernel.data();
+      // }
+      enum nnp_status status = nnp_convolution_depthwise_inference(
           algorithm,
           precompute ? nnp_convolution_transform_strategy_reuse
                      : nnp_convolution_transform_strategy_compute,
