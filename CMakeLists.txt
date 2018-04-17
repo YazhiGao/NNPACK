@@ -209,7 +209,9 @@ ENDIF()
 
 # ---[ NNPACK library
 SET(NNPACK_INIT_SRCS src/init.c)
-SET(NNPACK_LAYER_SRCS src/convolution-inference.c)
+SET(NNPACK_LAYER_SRCS 
+  src/convolution-inference.c
+  src/convolution-depthwise-inference.c)
 IF(NOT NNPACK_CONVOLUTION_ONLY)
   LIST(APPEND NNPACK_LAYER_SRCS
     src/fully-connected-inference.c
@@ -230,6 +232,7 @@ IF(NOT NNPACK_INFERENCE_ONLY)
 ENDIF()
 
 SET(NNPACK_REFERENCE_LAYERS_SRCS
+  src/ref/convolution-depthwise-output.c
   src/ref/convolution-output.c
   src/ref/convolution-input-gradient.c
   src/ref/convolution-kernel.c
@@ -555,6 +558,12 @@ IF(NNPACK_BUILD_TESTS)
   TARGET_INCLUDE_DIRECTORIES(convolution-inference-vgg-test PRIVATE test)
   TARGET_LINK_LIBRARIES(convolution-inference-vgg-test PRIVATE nnpack nnpack_reference_layers gtest)
   ADD_TEST(convolution-inference-vgg convolution-inference-vgg-test)
+
+  ADD_EXECUTABLE(convolution-depthwise-inference-mobilenet-test test/convolution-depthwise-inference/mobilenet.cc)
+  NNPACK_TARGET_ENABLE_CXX11(convolution-depthwise-inference-mobilenet-test)
+  TARGET_INCLUDE_DIRECTORIES(convolution-depthwise-inference-mobilenet-test PRIVATE test)
+  TARGET_LINK_LIBRARIES(convolution-depthwise-inference-mobilenet-test PRIVATE nnpack nnpack_reference_layers gtest)
+  ADD_TEST(convolution-depthwise-inference-mobilenet convolution-depthwise-inference-mobilenet-test)
 
   IF(NOT NNPACK_INFERENCE_ONLY)
     ADD_EXECUTABLE(convolution-output-smoketest test/convolution-output/smoke.cc)

@@ -54,6 +54,7 @@ def main(args):
         nnpack_objects = [
             build.cc("init.c"),
             build.cc("convolution-inference.c"),
+            build.cc("convolution-depthwise-inference.c")
         ]
         if not options.convolution_only:
             # Fully-connected, pooling, Softmax, ReLU layers
@@ -213,6 +214,7 @@ def main(args):
                 ]
 
         reference_layer_objects = [
+            build.cc("ref/convolution-depthwise-output.c"),
             build.cc("ref/convolution-output.c"),
             build.cc("ref/convolution-input-gradient.c"),
             build.cc("ref/convolution-kernel.c"),
@@ -374,7 +376,8 @@ def main(args):
             reference_layer_objects + [build.cxx("convolution-inference/vgg-a.cc")])
         build.unittest("convolution-inference-overfeat-fast-test",
             reference_layer_objects + [build.cxx("convolution-inference/overfeat-fast.cc")])
-
+        build.smoketest("convolution-depthwise-inference-mobilenet-test",
+            reference_layer_objects + [build.cxx("convolution-depthwise-inference/mobilenet.cc")])
         if not options.convolution_only:
             build.unittest("fully-connected-inference-alexnet-test",
                 reference_layer_objects + [build.cxx("fully-connected-inference/alexnet.cc")])
