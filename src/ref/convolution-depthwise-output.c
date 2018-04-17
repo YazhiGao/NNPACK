@@ -17,7 +17,8 @@ struct convolution_depthwise_output_context {
 };
 
 static void compute_convolution_depthwise_output(
-    const struct convolution_output_context context[restrict static 1],
+    const struct convolution_depthwise_output_context
+        context[restrict static 1],
     size_t sample, size_t output_channel) {
   const size_t input_channels = context->input_channels;
   const size_t output_channels = context->output_channels;
@@ -78,19 +79,20 @@ void nnp_convolution_depthwise_output__reference(
                  kernel_size.height) /
                     output_subsampling.height +
                 1};
-  struct convolution_depthwise_output convolution_depthwise_output_context = {
-      .input_channels = input_channels,
-      .output_channels = output_channels,
-      .depthwise_multiplier = depthwise_multiplier,
-      .input_size = input_size,
-      .input_padding = input_padding,
-      .kernel_size = kernel_size,
-      .output_size = output_size,
-      .output_subsampling = output_subsampling,
-      .input_pointer = input_pointer,
-      .kernel_pointer = kernel_pointer,
-      .bias = bias,
-      .output_pointer = output_pointer};
+  struct convolution_depthwise_output_context
+      convolution_depthwise_output_context = {
+          .input_channels = input_channels,
+          .output_channels = output_channels,
+          .depthwise_multiplier = depthwise_multiplier,
+          .input_size = input_size,
+          .input_padding = input_padding,
+          .kernel_size = kernel_size,
+          .output_size = output_size,
+          .output_subsampling = output_subsampling,
+          .input_pointer = input_pointer,
+          .kernel_pointer = kernel_pointer,
+          .bias = bias,
+          .output_pointer = output_pointer};
 
   pthreadpool_compute_2d(
       threadpool,

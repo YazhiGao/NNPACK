@@ -55,8 +55,8 @@ enum nnp_status nnp_convolution_depthwise_inference(
 
   nnp_convolution_depthwise_output__reference(
       1, input_channels, output_channels, output_channels / input_channels,
-      input_padding, kernel_size, output_subsampling, input, kernel, bias,
-      output, threadpool);
+      input_size, input_padding, kernel_size, output_subsampling, input, kernel,
+      bias, output, threadpool);
 
 cleanup:
   NNP_TOTAL_END(profile)

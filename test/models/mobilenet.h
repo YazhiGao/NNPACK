@@ -3,9 +3,6 @@
 #include <nnpack.h>
 
 #include <testers/convolution.h>
-#include <testers/fully-connected.h>
-#include <testers/pooling.h>
-#include <testers/relu.h>
 
 namespace MobileNet {
 // padding follows "SAME" scheme padding in original mobilenet implementation
@@ -178,7 +175,7 @@ inline ConvolutionTester convdw8() {
  * kernel size = 3 x 3
  * output sampling = 2 x 2
  */
-inline ConvolutionTester convdw8() {
+inline ConvolutionTester convdw9() {
   return std::move(ConvolutionTester()
                        .multithreading(true)
                        .inputChannels(128)

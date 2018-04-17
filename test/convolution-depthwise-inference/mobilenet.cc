@@ -2,54 +2,54 @@
 
 #include <nnpack.h>
 
-#include <models/alexnet.h>
+#include <models/mobilenet.h>
 #include <testers/convolution.h>
 
 /*
  * MobileNet conv_dw layers
  */
 TEST(NAIVE_SOLUTION, conv1_dw) {
-  MobileNet::conv1_dw().errorLimit(1.0e-5).testDepthwiseInference(
+  MobileNet::conv1dw().errorLimit(1.0e-5).testDepthwiseInference(
       nnp_convolution_algorithm_implicit_gemm, nnp_activation_identity);
 }
 
 TEST(NAIVE_SOLUTION, conv2_dw) {
-  MobileNet::conv2_dw().errorLimit(1.0e-5).testDepthwiseInference(
+  MobileNet::conv2dw().errorLimit(1.0e-5).testDepthwiseInference(
       nnp_convolution_algorithm_implicit_gemm, nnp_activation_identity);
 }
 
 TEST(NAIVE_SOLUTION, conv3_dw) {
-  MobileNet::conv3_dw().errorLimit(1.0e-5).testDepthwiseInference(
+  MobileNet::conv3dw().errorLimit(1.0e-5).testDepthwiseInference(
       nnp_convolution_algorithm_implicit_gemm, nnp_activation_identity);
 }
 
 TEST(NAIVE_SOLUTION, conv4_dw) {
-  MobileNet::conv4_dw().errorLimit(1.0e-5).testDepthwiseInference(
+  MobileNet::conv4dw().errorLimit(1.0e-5).testDepthwiseInference(
       nnp_convolution_algorithm_implicit_gemm, nnp_activation_identity);
 }
 
 TEST(NAIVE_SOLUTION, conv5_dw) {
-  MobileNet::conv5_dw().errorLimit(1.0e-5).testDepthwiseInference(
+  MobileNet::conv5dw().errorLimit(1.0e-5).testDepthwiseInference(
       nnp_convolution_algorithm_implicit_gemm, nnp_activation_identity);
 }
 
 TEST(NAIVE_SOLUTION, conv6_dw) {
-  MobileNet::conv6_dw().errorLimit(1.0e-5).testDepthwiseInference(
+  MobileNet::conv6dw().errorLimit(1.0e-5).testDepthwiseInference(
       nnp_convolution_algorithm_implicit_gemm, nnp_activation_identity);
 }
 
-TEST(NAIVE_SOLUTION, conv1 = 7_dw) {
-  MobileNet::conv7_dw().errorLimit(1.0e-5).testDepthwiseInference(
+TEST(NAIVE_SOLUTION, conv7_dw) {
+  MobileNet::conv7dw().errorLimit(1.0e-5).testDepthwiseInference(
       nnp_convolution_algorithm_implicit_gemm, nnp_activation_identity);
 }
 
 TEST(NAIVE_SOLUTION, conv8_dw) {
-  MobileNet::conv8_dw().errorLimit(1.0e-5).testDepthwiseInference(
+  MobileNet::conv8dw().errorLimit(1.0e-5).testDepthwiseInference(
       nnp_convolution_algorithm_implicit_gemm, nnp_activation_identity);
 }
 
 TEST(NAIVE_SOLUTION, conv9_dw) {
-  MobileNet::conv9_dw().errorLimit(1.0e-5).testDepthwiseInference(
+  MobileNet::conv9dw().errorLimit(1.0e-5).testDepthwiseInference(
       nnp_convolution_algorithm_implicit_gemm, nnp_activation_identity);
 }
 int main(int argc, char* argv[]) {
