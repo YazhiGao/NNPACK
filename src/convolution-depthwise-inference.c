@@ -280,7 +280,7 @@ static enum nnp_status compute_gemm_convolution_inference(
             pthreadpool_compute_2d_tiled(
                 threadpool,
                 (pthreadpool_function_2d_tiled_t)compute_kernel_packing,
-                &kernel_packing_context, output_channels, reduction_block_size,
+                &kernel_packing_context, depth_multiplier, reduction_block_size,
                 output_channels_subblock_max, 1);
             NNP_KERNEL_TRANSFORM_END(profile)
           } else {
@@ -344,7 +344,7 @@ static enum nnp_status compute_gemm_convolution_inference(
             pthreadpool_compute_2d_tiled(
                 threadpool,
                 (pthreadpool_function_2d_tiled_t)compute_matrix_multiplication,
-                &matrix_multiplication_context, output_channels,
+                &matrix_multiplication_context, depth_multiplier,
                 output_image_block_size, output_channels_block_max,
                 output_image_subblock_max);
             NNP_BLOCK_MULTIPLICATION_END(profile)
