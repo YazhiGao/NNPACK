@@ -429,6 +429,7 @@ def main(args):
             "rt": build.target.is_linux}):
 
         build.benchmark("convolution-inference-bench", build.cxx("convolution-inference.cc"))
+        build.benchmark("convolution-depthwise-inference-bench", build.cxx("convolution-depthwise-inference.cc"))
         build.benchmark("sgemm-bench", build.cxx("sgemm.cc"))
         build.benchmark("sxgemm-bench", build.cxx("sxgemm.cc"))
 
