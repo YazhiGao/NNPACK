@@ -32,9 +32,10 @@ static void compute_convolution_depthwise_output(
   const float(*input)[input_channels][input_size.height][input_size.width] =
       (const float(*)[input_channels][input_size.height][input_size.width])
           context->input_pointer;
-  const float(*kernel)[input_channels][kernel_size.height][kernel_size.width] =
-      (const float(*)[input_channels][kernel_size.height][kernel_size.width])
-          context->kernel_pointer;
+  const float(
+      *kernel)[depthwise_multiplier][kernel_size.height][kernel_size.width] =
+      (const float(*)[depthwise_multiplier][kernel_size.height]
+                     [kernel_size.width])context->kernel_pointer;
   float(*output)[output_channels][output_size.height][output_size.width] =
       (float(*)[output_channels][output_size.height][output_size.width])
           context->output_pointer;
@@ -53,7 +54,7 @@ static void compute_convolution_depthwise_output(
                 x * output_subsampling.width + j - input_padding.left;
             if (t < input_size.width) {
               v += input[sample][input_channel][s][t] *
-                   kernel[depthwise_channel][input_channel][i][j];
+                   kernel[input_channel][depthwise_channel][i][j];
             }
           }
         }
