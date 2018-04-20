@@ -394,28 +394,32 @@ static enum nnp_status compute_gemm_convolution_inference(
         memory_block = workspace_buffer;
       }
 
-      for (size_t reduction_block_start = 0;
-           reduction_block_start < reduction_size;
-           reduction_block_start += reduction_block_max) {
-        const size_t reduction_block_size =
-            min(reduction_size - reduction_block_start, reduction_block_max);
+      for (size_t group = 0; group < input_channels; group++) {
+        for (size_t reduction_block_start = 0;
+             reduction_block_start < reduction_size;
+             reduction_block_start += reduction_block_max) {
+          const size_t reduction_block_size =
+              min(reduction_size - reduction_block_start, reduction_block_max);
 
-        /* Pack kernel into memory block */
-        NNP_KERNEL_TRANSFORM_START(profile)
-        struct kernel_packing_context kernel_packing_context = {
-            .kernel = kernel + reduction_block_start,
-            .packed_kernel =
-                (void*)workspace_buffer +
-                output_channels * reduction_block_start * sizeof(float),
-            .reduction_size = reduction_size,
-            .reduction_block_start = reduction_block_start,
-            .reduction_block_size = reduction_block_size,
-        };
-        pthreadpool_compute_2d_tiled(
-            threadpool, (pthreadpool_function_2d_tiled_t)compute_kernel_packing,
-            &kernel_packing_context, output_channels, reduction_block_size,
-            output_channels_subblock_max, 1);
-        NNP_KERNEL_TRANSFORM_END(profile)
+          /* Pack kernel into memory block */
+          NNP_KERNEL_TRANSFORM_START(profile)
+          struct kernel_packing_context kernel_packing_context = {
+              .kernel = kernel + reduction_block_start,
+              .packed_kernel =
+                  (void*)workspace_buffer +
+                  depth_multiplier * group * reduction_size * sizeof(float) +
+                  reduction_size * reduction_block_start * sizeof(float),
+              .reduction_size = reduction_size,
+              .reduction_block_start = reduction_block_start,
+              .reduction_block_size = reduction_block_size,
+          };
+          pthreadpool_compute_2d_tiled(
+              threadpool,
+              (pthreadpool_function_2d_tiled_t)compute_kernel_packing,
+              &kernel_packing_context, output_channels, reduction_block_size,
+              output_channels_subblock_max, 1);
+          NNP_KERNEL_TRANSFORM_END(profile)
+        }
       }
       break;
     }
