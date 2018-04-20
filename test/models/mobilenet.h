@@ -43,7 +43,7 @@ inline ConvolutionTester convdw2() {
                        .inputSize(112, 112)
                        .kernelSize(3, 3)
                        .outputSubsampling(2, 2)
-                       .inputPadding(1, 2, 1, 2));
+                       .inputPadding(0, 1, 0, 1));
 }
 
 /*
@@ -83,7 +83,7 @@ inline ConvolutionTester convdw4() {
                        .inputSize(56, 56)
                        .kernelSize(3, 3)
                        .outputSubsampling(2, 2)
-                       .inputPadding(1, 2, 1, 2));
+                       .inputPadding(0, 1, 0, 1));
 }
 
 /*
@@ -98,9 +98,9 @@ inline ConvolutionTester convdw4() {
 inline ConvolutionTester convdw5() {
   return std::move(ConvolutionTester()
                        .multithreading(true)
-                       .inputChannels(128)
-                       .outputChannels(128)
-                       .inputSize(56, 56)
+                       .inputChannels(256)
+                       .outputChannels(256)
+                       .inputSize(28, 28)
                        .kernelSize(3, 3)
                        .outputSubsampling(1, 1)
                        .inputPadding(1, 1, 1, 1));
@@ -118,12 +118,12 @@ inline ConvolutionTester convdw5() {
 inline ConvolutionTester convdw6() {
   return std::move(ConvolutionTester()
                        .multithreading(true)
-                       .inputChannels(128)
-                       .outputChannels(128)
-                       .inputSize(56, 56)
+                       .inputChannels(256)
+                       .outputChannels(256)
+                       .inputSize(28, 28)
                        .kernelSize(3, 3)
                        .outputSubsampling(2, 2)
-                       .inputPadding(1, 2, 1, 2));
+                       .inputPadding(0, 1, 0, 1));
 }
 
 /*
@@ -138,9 +138,9 @@ inline ConvolutionTester convdw6() {
 inline ConvolutionTester convdw7() {
   return std::move(ConvolutionTester()
                        .multithreading(true)
-                       .inputChannels(128)
-                       .outputChannels(128)
-                       .inputSize(56, 56)
+                       .inputChannels(512)
+                       .outputChannels(512)
+                       .inputSize(14, 14)
                        .kernelSize(3, 3)
                        .outputSubsampling(1, 1)
                        .inputPadding(1, 1, 1, 1));
@@ -158,12 +158,12 @@ inline ConvolutionTester convdw7() {
 inline ConvolutionTester convdw8() {
   return std::move(ConvolutionTester()
                        .multithreading(true)
-                       .inputChannels(128)
-                       .outputChannels(128)
-                       .inputSize(56, 56)
+                       .inputChannels(512)
+                       .outputChannels(512)
+                       .inputSize(14, 14)
                        .kernelSize(3, 3)
                        .outputSubsampling(2, 2)
-                       .inputPadding(1, 2, 1, 2));
+                       .inputPadding(0, 1, 0, 1));
 }
 
 /*
@@ -178,11 +178,11 @@ inline ConvolutionTester convdw8() {
 inline ConvolutionTester convdw9() {
   return std::move(ConvolutionTester()
                        .multithreading(true)
-                       .inputChannels(128)
-                       .outputChannels(128)
-                       .inputSize(56, 56)
+                       .inputChannels(1024)
+                       .outputChannels(1024)
+                       .inputSize(7, 7)
                        .kernelSize(3, 3)
                        .outputSubsampling(2, 2)
-                       .inputPadding(1, 2, 1, 2));
+                       .inputPadding(0, 1, 0, 1));
 }
 }  // namespace MobileNet
