@@ -14,8 +14,6 @@
 #include <nnpack/hwinfo.h>
 #include <nnpack/validation.h>
 
-// very naive implementation
-#include <nnpack/reference.h>
 struct NNP_CACHE_ALIGN kernel_packing_context {
   const float* kernel;
   float* packed_kernel;
