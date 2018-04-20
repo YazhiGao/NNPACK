@@ -143,7 +143,7 @@ inline ConvolutionTester convdw7() {
                        .inputSize(56, 56)
                        .kernelSize(3, 3)
                        .outputSubsampling(1, 1)
-                       .inputPadding(1, 2, 1, 2));
+                       .inputPadding(1, 1, 1, 1));
 }
 
 /*
