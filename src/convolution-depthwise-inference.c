@@ -284,7 +284,7 @@ static enum nnp_status compute_gemm_convolution_inference(
           } else {
             packed_kernel =
                 (void*)kernel + group * depth_multiplier * reduction_size +
-                output_channels * reduction_block_start * sizeof(float);
+                depth_multiplier * reduction_block_start * sizeof(float);
           }
 
           const struct fxdiv_divisor_size_t kernel_elements_divisor =
@@ -414,7 +414,7 @@ static enum nnp_status compute_gemm_convolution_inference(
           pthreadpool_compute_2d_tiled(
               threadpool,
               (pthreadpool_function_2d_tiled_t)compute_kernel_packing,
-              &kernel_packing_context, output_channels, reduction_block_size,
+              &kernel_packing_context, depth_multiplier, reduction_block_size,
               output_channels_subblock_max, 1);
           NNP_KERNEL_TRANSFORM_END(profile)
         }
