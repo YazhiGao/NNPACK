@@ -53,12 +53,24 @@ enum nnp_status nnp_convolution_depthwise_inference(
                     output_subsampling.height +
                 1};
 
-  nnp_convolution_depthwise_output__reference(
-      1, input_channels, output_channels, output_channels / input_channels,
-      input_size, input_padding, kernel_size, output_subsampling, input, kernel,
-      bias, output, threadpool);
+  size_t buffer_size = 1024;  // Buffer for a batch of output pixels
+  for (size_t out_y = 0; out_y < output_size.height; out_y++) {
+    for (size_t out_x = 0; out_x < output_size.width; out_x++) {
+      per_output_pixel_inference(out_x, out_y, input_channels, output_channels,
+                                 input_size, input_padding, kernel_size,
+                                 output_subsampling, input, kernel, output,
+                                 workspace_buffer, workspace_size);
+    }
+  }
 
 cleanup:
   NNP_TOTAL_END(profile)
   return status;
 }
+
+enum void per_output_pixel_inference(
+    size_t out_x, size_t out_y, size_t input_channels, size_t output_channels,
+    struct nnp_size input_size, struct nnp_padding input_padding,
+    struct nnp_size kernel_size, struct nnp_size output_subsampling,
+    const float* input, const float* kernel, float* output,
+    void* workspace_buffer, size_t* workspace_size) {}
