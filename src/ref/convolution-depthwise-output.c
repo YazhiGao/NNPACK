@@ -29,15 +29,18 @@ static void compute_convolution_depthwise_output(
   const struct nnp_size output_size = context->output_size;
   const struct nnp_size output_subsampling = context->output_subsampling;
 
-  const float(*input)[input_channels][input_size.height][input_size.width] =
-      (const float(*)[input_channels][input_size.height][input_size.width])
+  // input layout NHWC
+  // kernel layout HWCX
+  // output layout NHW(CX)
+  const float(*input)[input_size.height][input_size.width][input_channels] =
+      (const float(*)[input_size.height][input_size.width][input_channels])
           context->input_pointer;
   const float(
-      *kernel)[depthwise_multiplier][kernel_size.height][kernel_size.width] =
-      (const float(*)[depthwise_multiplier][kernel_size.height]
-                     [kernel_size.width])context->kernel_pointer;
-  float(*output)[output_channels][output_size.height][output_size.width] =
-      (float(*)[output_channels][output_size.height][output_size.width])
+      *kernel)[kernel_size.width][input_channels][depthwise_multiplier] =
+      (const float(*)[kernel_size.width][input_channels][depthwise_multiplier])
+          context->kernel_pointer;
+  float(*output)[output_size.height][output_size.width][output_channels] =
+      (float(*)[output_size.height][output_size.width][output_channels])
           context->output_pointer;
 
   size_t depthwise_channel = output_channel % depthwise_multiplier;
@@ -53,13 +56,13 @@ static void compute_convolution_depthwise_output(
             const size_t t =
                 x * output_subsampling.width + j - input_padding.left;
             if (t < input_size.width) {
-              v += input[sample][input_channel][s][t] *
-                   kernel[input_channel][depthwise_channel][i][j];
+              v += input[sample][s][t][input_channel] *
+                   kernel[i][j][input_channel][depthwise_channel];
             }
           }
         }
       }
-      output[sample][output_channel][y][x] = v + context->bias[output_channel];
+      output[sample][y][x][output_channel] = v + context->bias[output_channel];
     }
   }
 }
