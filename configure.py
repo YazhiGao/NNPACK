@@ -53,9 +53,14 @@ def main(args):
 
         nnpack_objects = [
             build.cc("init.c"),
-            build.cc("convolution-inference.c"),
-            build.cc("convolution-depthwise-inference.c")
+            build.cc("convolution-inference.c")
         ]
+        if backend=="x86_64":
+            nnpack_objects.append(build.cc("convolution-depthwise-inference.c"))
+        elif backend == "arm":
+            from confu import arm
+            with build.options(isa=arm.neon+arm.fp16 if options.target.is_arm else None):
+                nnpack_objects.append(build.cc("convolution-depthwise-inference.c"))
         if not options.convolution_only:
             # Fully-connected, pooling, Softmax, ReLU layers
             nnpack_objects += [
