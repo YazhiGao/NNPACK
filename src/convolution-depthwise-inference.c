@@ -50,12 +50,12 @@ enum nnp_status nnp_convolution_depthwise_inference(
               output_subsampling.height +
           1};
 
-  size_t buffer_size = 1024; // Buffer for a batch of output pixels
+  size_t depth_multipler = input_channels / output_channels;
   for (size_t out_y = 0; out_y < output_size.height; out_y++) {
     for (size_t out_x = 0; out_x < output_size.width; out_x++) {
       per_output_pixel_inference(out_x, out_y, input_channels, output_channels, input_size,
-                                 input_padding, kernel_size, output_subsampling, input, kernel,
-                                 output, workspace_buffer, workspace_size);
+                                 depth_multipler, input_padding, kernel_size, output_subsampling,
+                                 input, kernel, output, workspace_buffer, workspace_size);
     }
   }
 
@@ -66,13 +66,24 @@ cleanup:
 
 enum void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_channels,
                                      size_t output_channels, struct nnp_size input_size,
-                                     struct nnp_padding input_padding, struct nnp_size kernel_size,
+                                     size_t depth_multiplier, struct nnp_padding input_padding,
+                                     struct nnp_size kernel_size,
                                      struct nnp_size output_subsampling, const float *input,
                                      const float *kernel, float *output, void *workspace_buffer,
                                      size_t *workspace_size) {
-  struct nnp_size input_offset = {.width = };
+  float *output_pos = output + out_y * output_size.width + out_x;
   for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
-    for (size_t filter_x = 0; filter_x < kernel_size.width, filter_x++) {
+    const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
+    if (input_y < input_size.height) {
+      for (size_t filter_x = 0; filter_x < kernel_size.width, filter_x++) {
+        const size_t input_x = out_x * output_subsampling.width + filter_x - input_padding.left;
+        if (size_t input_x < input_size.width) {
+          const float *input_pos = input + input_y * input_size.width + input_x;
+          const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
+                                                 input_channels * depth_multiplier;
+          nnp_depthwise_micro_kernel(input_pos, kernel_pos, output_pos, depth_multipler, input_channels);
+        }
+      }
     }
   }
 }
