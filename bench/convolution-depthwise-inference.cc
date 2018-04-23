@@ -81,38 +81,34 @@ BENCHMARK_DEFINE_F(NNPACK, conv3x3)(benchmark::State &state) {
   state.SetItemsProcessed(state.iterations() * imageSize * imageSize * inputChannels *
                           outputChannels);
 }
-BENCHMARK_REGISTER_F(NNPACK, conv3x3_convdw1)
-    ->Apply(ConvolutionSetup)
-    ->Args({32, 32, 112, 1, 1, 1, 1, 1});
-BENCHMARK_REGISTER_F(NNPACK, conv3x3_convdw2)
-    ->Apply(ConvolutionSetup)
-    ->Args({64, 64, 112, 2, 0, 1, 0, 1});
-
-BENCHMARK_REGISTER_F(NNPACK, conv3x3_convdw3)
+// conv1
+BENCHMARK_REGISTER_F(NNPACK, conv3x3)->Apply(ConvolutionSetup)->Args({32, 32, 112, 1, 1, 1, 1, 1});
+// conv2
+BENCHMARK_REGISTER_F(NNPACK, conv3x3)->Apply(ConvolutionSetup)->Args({64, 64, 112, 2, 0, 1, 0, 1});
+// conv3
+BENCHMARK_REGISTER_F(NNPACK, conv3x3)
     ->Apply(ConvolutionSetup)
     ->Args({128, 128, 56, 1, 1, 1, 1, 1});
-
-BENCHMARK_REGISTER_F(NNPACK, conv3x3_convdw4)
+// conv4
+BENCHMARK_REGISTER_F(NNPACK, conv3x3)
     ->Apply(ConvolutionSetup)
     ->Args({128, 128, 56, 2, 0, 1, 0, 1});
-
-BENCHMARK_REGISTER_F(NNPACK, conv3x3_convdw4)
+// conv5
+BENCHMARK_REGISTER_F(NNPACK, conv3x3)
     ->Apply(ConvolutionSetup)
     ->Args({128, 128, 56, 1, 1, 1, 1, 1});
-
-BENCHMARK_REGISTER_F(NNPACK, conv3x3_convdw5)
-    ->Apply(ConvolutionSetup)
-    ->Args({128, 128, 56, 1, 1, 1, 1, 1});
-BENCHMARK_REGISTER_F(NNPACK, conv3x3_convdw6)
+// conv6
+BENCHMARK_REGISTER_F(NNPACK, conv3x3)
     ->Apply(ConvolutionSetup)
     ->Args({256, 256, 28, 2, 0, 1, 0, 1});
-BENCHMARK_REGISTER_F(NNPACK, conv3x3_convdw7)
+// conv7
+BENCHMARK_REGISTER_F(NNPACK, conv3x3)
     ->Apply(ConvolutionSetup)
     ->Args({512, 512, 14, 1, 1, 1, 1, 1});
-BENCHMARK_REGISTER_F(NNPACK, conv3x3_convdw8)
+// conv8
+BENCHMARK_REGISTER_F(NNPACK, conv3x3)
     ->Apply(ConvolutionSetup)
     ->Args({512, 512, 14, 2, 0, 1, 0, 1});
-BENCHMARK_REGISTER_F(NNPACK, conv3x3_convdw9)
-    ->Apply(ConvolutionSetup)
-    ->Args({512, 512, 7, 2, 0, 1, 0, 1});
+// conv9
+BENCHMARK_REGISTER_F(NNPACK, conv3x3)->Apply(ConvolutionSetup)->Args({512, 512, 7, 2, 0, 1, 0, 1});
 BENCHMARK_MAIN();
