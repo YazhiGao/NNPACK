@@ -56,6 +56,30 @@ static inline void nnp_depthwise_micro_kernel(const float *input, const float *k
     }
   }
 }
+static void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_channels,
+                                       size_t output_channels, struct nnp_size input_size,
+                                       size_t depth_multiplier, struct nnp_padding input_padding,
+                                       struct nnp_size kernel_size,
+                                       struct nnp_size output_subsampling, const float *input,
+                                       const float *kernel, float *output, void *workspace_buffer,
+                                       size_t *workspace_size) {
+  float *output_pos = output + out_y * output_size.width + out_x;
+  for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
+    const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
+    if (input_y < input_size.height) {
+      for (size_t filter_x = 0; filter_x < kernel_size.width, filter_x++) {
+        const size_t input_x = out_x * output_subsampling.width + filter_x - input_padding.left;
+        if (size_t input_x < input_size.width) {
+          const float *input_pos = input + input_y * input_size.width + input_x;
+          const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
+                                                 input_channels * depth_multiplier;
+          nnp_depthwise_micro_kernel(input_pos, kernel_pos, output_pos, depth_multipler,
+                                     input_channels);
+        }
+      }
+    }
+  }
+}
 #endif
 
 enum nnp_status nnp_convolution_depthwise_inference(
@@ -108,29 +132,3 @@ cleanup:
   NNP_TOTAL_END(profile)
   return status;
 }
-#if NNP_BACKEND_ARM
-static void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_channels,
-                                       size_t output_channels, struct nnp_size input_size,
-                                       size_t depth_multiplier, struct nnp_padding input_padding,
-                                       struct nnp_size kernel_size,
-                                       struct nnp_size output_subsampling, const float *input,
-                                       const float *kernel, float *output, void *workspace_buffer,
-                                       size_t *workspace_size) {
-  float *output_pos = output + out_y * output_size.width + out_x;
-  for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
-    const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
-    if (input_y < input_size.height) {
-      for (size_t filter_x = 0; filter_x < kernel_size.width, filter_x++) {
-        const size_t input_x = out_x * output_subsampling.width + filter_x - input_padding.left;
-        if (size_t input_x < input_size.width) {
-          const float *input_pos = input + input_y * input_size.width + input_x;
-          const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
-                                                 input_channels * depth_multiplier;
-          nnp_depthwise_micro_kernel(input_pos, kernel_pos, output_pos, depth_multipler,
-                                     input_channels);
-        }
-      }
-    }
-  }
-}
-#endif
