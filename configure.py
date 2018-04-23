@@ -55,12 +55,6 @@ def main(args):
             build.cc("init.c"),
             build.cc("convolution-inference.c")
         ]
-        if backend=="x86_64":
-            nnpack_objects.append(build.cc("convolution-depthwise-inference.c"))
-        elif backend == "arm":
-            from confu import arm
-            with build.options(isa=arm.neon+arm.fp16 if options.target.is_arm else None):
-                nnpack_objects.append(build.cc("convolution-depthwise-inference.c"))
         if not options.convolution_only:
             # Fully-connected, pooling, Softmax, ReLU layers
             nnpack_objects += [
@@ -85,6 +79,7 @@ def main(args):
             ]
 
         if backend == "x86_64":
+            nnpack_objects += [build.cc("convolution-depthwise-inference.c")]
             arch_nnpack_objects = [
                 # Transformations
                 build.peachpy("x86_64-fma/2d-fourier-8x8.py"),
@@ -144,6 +139,7 @@ def main(args):
         elif backend == "arm":
             from confu import arm
             with build.options(isa=arm.neon+arm.fp16 if options.target.is_arm else None):
+                nnpack_objects += [build.cc("convolution-depthwise-inference.c")]
                 arch_nnpack_objects = [
                     # Transformations
                     build.cc("psimd/2d-fourier-8x8.c"),
