@@ -7,7 +7,7 @@
 
 
 static void ConvolutionSetup(benchmark::internal::Benchmark* benchmark) {
-	benchmark->Unit(benchmark::kMicrosecond)->ArgNames({"Cin", "Cout", "ImageSize"});
+	benchmark->Unit(benchmark::kMicrosecond)->ArgNames({"Cin", "Cout", "ImageSize","StrideOut","Ptop","Pbot","Pleft","Pright"});
 }
 
 class NNPACK : public benchmark::Fixture {
@@ -26,6 +26,11 @@ BENCHMARK_DEFINE_F(NNPACK, conv1x1)(benchmark::State& state) {
 	const size_t inputChannels  = static_cast<size_t>(state.range(0));
 	const size_t outputChannels = static_cast<size_t>(state.range(1));
 	const size_t imageSize      = static_cast<size_t>(state.range(2));
+  const size_t strideOut = static_cast<size_t>(state.range(3));
+  const size_t ptop = static_cast<size_t>(state.range(4));
+  const size_t pbot = static_cast<size_t>(state.range(5));
+  const size_t pleft = static_cast<size_t>(state.range(6));
+  const size_t pright = static_cast<size_t>(state.range(7));
 
 	std::vector<float> input, kernel, output, bias;
 	std::vector<uint8_t, AlignedAllocator<uint8_t, 32>> transformedKernel, workspaceBuffer;
@@ -37,9 +42,9 @@ BENCHMARK_DEFINE_F(NNPACK, conv1x1)(benchmark::State& state) {
 	nnp_convolution_transform_strategy strategy = nnp_convolution_transform_strategy_compute;
 	const nnp_convolution_algorithm algorithm = nnp_convolution_algorithm_implicit_gemm;
 	const nnp_size imageSize2D = { imageSize, imageSize };
-	const nnp_size kernelSize2D = { 1, 1 };
-	const nnp_size outputStride2D = { 1, 1 };
-	const nnp_padding imagePadding = { 0, 0, 0, 0 };
+	const nnp_size kernelSize2D = { 3, 3 };
+	const nnp_size outputStride2D = { strideOut, strideOut };
+	const nnp_padding imagePadding = {ptop, pbot, pleft, pright};
 
 	size_t workspaceSize = 0;
 	nnp_status status = nnp_convolution_depthwise_inference(
