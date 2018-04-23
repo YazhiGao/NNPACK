@@ -16,6 +16,51 @@
 
 // very naive implementation
 #include <nnpack/reference.h>
+#if NNP_BACKEND_ARM
+static inline void nnp_depthwise_micro_kernel(
+    const float* input, const float* kernel, float* output,
+    size_t depth_multiplier, size_t input_channels, size_t simd_width) {
+  float32x4_t input_simd;
+  float32x4_t kernel_simd;
+  float32x4_t acc_simd;
+  float32x2_t h_input_simd;
+  float32x2_t h_kernel_simd;
+  float32x2_t h_acc_simd;
+  for (size_t depth_multiplier_index = 0;
+       depth_multiplier_index < depth_multiplier; depth_multiplier_index++) {
+    size_t input_channel_index = 0;
+    for (; input_channel_index < input_channels - simd_width;
+         input_channel_index += simd_width) {
+      float* out_simd = output + depth_multiplier_index * input_channels +
+                        input_channel_index;
+      input_simd = vld1q_f32(input + input_channel_index);
+      kernel_simd = vld1q_f32(kernel + depth_multiplier_index * input_channels +
+                              input_channel_index);
+      acc_simd = vld1q_f32(output_simd);
+      acc_simd = vmlaq_f32(acc_simd, input_simd, kernel_simd);
+      vst1q_f32(output_simd, acc_simd);
+    }
+    size_t h_simd_width = simd_width / 2;
+    for (; input_channel_index < input_channels - h_simd_width;
+         input_channel_index += h_simd_width) {
+      float* h_out_simd = output + depth_multiplier_index * input_channels +
+                          input_channel_index;
+      h_input_simd = vld1q_f32(input + input_channel_index);
+      h_kernel_simd =
+          vld1q_f32(kernel + depth_multiplier_index * input_channels +
+                    input_channel_index);
+      h_acc_simd = vld1_f32(h_output_simd);
+      h_acc_simd = vmla_f32(h_acc_simd, h_input_simd, h_kernel_simd);
+      vst1_f32(h_output_simd, h_acc_simd);
+    }
+    for (; input_channel_index < input_channels; input_channel_index++) {
+      const float input_s = *(input+ input_channel_index;
+      const float kernel_s = *(kernel + depth_multiplier_index * input_channels + input_channel_index);
+      *(output+ depth_multiplier_index * input_channels + input_channel_index) = input_s* kernel_s;
+    }
+  }
+}
+#endif
 
 enum nnp_status nnp_convolution_depthwise_inference(
     enum nnp_convolution_algorithm algorithm,
