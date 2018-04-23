@@ -45,9 +45,9 @@ static inline void nnp_depthwise_micro_kernel(const float *input, const float *k
          input_channel_index += h_simd_width) {
       float *h_output_simd =
           output + depth_multiplier_index * input_channels + input_channel_index;
-      h_input_simd = vld1q_f32(input + input_channel_index);
+      h_input_simd = vld1_f32(input + input_channel_index);
       h_kernel_simd =
-          vld1q_f32(kernel + depth_multiplier_index * input_channels + input_channel_index);
+          vld1_f32(kernel + depth_multiplier_index * input_channels + input_channel_index);
       h_acc_simd = vld1_f32(h_output_simd);
       h_acc_simd = vmla_f32(h_acc_simd, h_input_simd, h_kernel_simd);
       vst1_f32(h_output_simd, h_acc_simd);
