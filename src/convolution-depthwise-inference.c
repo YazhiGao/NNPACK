@@ -85,7 +85,6 @@ static void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_
       }
     }
   }
-  NNP_OUTPUT_TRANSFORM_START(profile)
   switch (activation) {
   case nnp_activation_identity:
     memcpy((void *)output_pos, workspace_buffer, workspace_size);
@@ -106,7 +105,6 @@ static void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_
   default:
     NNP_UNREACHABLE;
   }
-  NNP_OUTPUT_TRANSFORM_END(profile)
 }
 #else
 struct convolution_depthwise_output_context {
