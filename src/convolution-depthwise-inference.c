@@ -76,7 +76,7 @@ void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_channel
                                 const float *kernel, const float *bias, float *output,
                                 void *workspace_buffer, size_t *workspace_size,
                                 enum nnp_activation activation,
-                                micro_kernel_function *kernel_function) {
+                                micro_kernel_function kernel_function) {
   float *output_pos = output + out_y * output_size.width + out_x;
   memcpy(workspace_buffer, (void *)bias, *workspace_size);
   for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
@@ -88,7 +88,7 @@ void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_channel
           const float *input_pos = input + (input_y * input_size.width + input_x) * input_channels;
           const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
                                                  input_channels * depthwise_multiplier;
-          (*kernel_function)(input_pos, kernel_pos, (float *)workspace_buffer,
+          kernel_function(input_pos, kernel_pos, (float *)workspace_buffer,
                              depthwise_multiplier, input_channels);
         }
       }
@@ -241,8 +241,8 @@ enum nnp_status nnp_convolution_depthwise_inference(
     }
     memory_block = workspace_buffer;
   }
-  micro_kernel_function *kernel_function;
-  select_micro_kernel(input_channels, depthwise_multiplier, kernel_function);
+  micro_kernel_function kernel_function;
+  select_micro_kernel(input_channels, depthwise_multiplier, &kernel_function);
   for (size_t out_y = 0; out_y < output_size.height; out_y++) {
     for (size_t out_x = 0; out_x < output_size.width; out_x++) {
       per_output_pixel_inference(out_x, out_y, input_channels, output_channels, input_size,
