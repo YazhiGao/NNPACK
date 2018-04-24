@@ -77,7 +77,7 @@ void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_channel
                                 void *workspace_buffer, size_t *workspace_size,
                                 enum nnp_activation activation,
                                 micro_kernel_function kernel_function) {
-  float *output_pos = output + out_y * output_size.width + out_x;
+  float *output_pos = output + (out_y * output_size.width + out_x) * output_channels;
   memcpy(workspace_buffer, (void *)bias, *workspace_size);
   for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
     const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
