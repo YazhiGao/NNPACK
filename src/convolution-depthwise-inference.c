@@ -88,8 +88,8 @@ void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_channel
           const float *input_pos = input + (input_y * input_size.width + input_x) * input_channels;
           const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
                                                  input_channels * depthwise_multiplier;
-          kernel_function(input_pos, kernel_pos, (float *)workspace_buffer, depthwise_multiplier,
-                          input_channels);
+          (*kernel_function)(input_pos, kernel_pos, (float *)workspace_buffer,
+                             depthwise_multiplier, input_channels);
         }
       }
     }
@@ -124,7 +124,7 @@ static inline void select_micro_kernel(const size_t input_channels,
                                        micro_kernel_function *kernel_function) {
   switch (depthwise_multiplier) {
   case 1:
-    kernel_function = nnp_depthwise_1_micro_kernel;
+    *kernel_function = nnp_depthwise_1_micro_kernel;
     break;
   }
 }
