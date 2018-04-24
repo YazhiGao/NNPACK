@@ -14,8 +14,6 @@
 #include <nnpack/hwinfo.h>
 #include <nnpack/validation.h>
 
-// very naive implementation
-#include <nnpack/reference.h>
 #if NNP_BACKEND_ARM
 #include <nnpack/arm_neon.h>
 #include <nnpack/macros.h>
@@ -68,15 +66,43 @@ static inline void nnp_depthwise_1_micro_kernel(const float *input, const float 
   }
 }
 
-void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_channels,
-                                size_t output_channels, struct nnp_size input_size,
-                                struct nnp_size output_size, size_t depthwise_multiplier,
-                                struct nnp_padding input_padding, struct nnp_size kernel_size,
-                                struct nnp_size output_subsampling, const float *input,
-                                const float *kernel, const float *bias, float *output,
-                                void *workspace_buffer, size_t *workspace_size,
-                                enum nnp_activation activation,
-                                micro_kernel_function kernel_function) {
+struct per_output_pixel_context {
+  size_t input_channels;
+  size_t output_channels;
+  struct nnp_size input_size;
+  struct nnp_size output_size;
+  size_t depthwise_multiplier;
+  struct nnp_padding input_padding;
+  struct nnp_size kernel_size;
+  struct nnp_size output_subsampling;
+  const float *input;
+  const float *kernel;
+  const float *bias;
+  float *output;
+  void *workspace_buffer;
+  size_t *workspace_size;
+  enum nnp_activation activation;
+  micro_kernel_function kernel_function;
+};
+
+void per_output_pixel_inference(const struct per_output_pixel_context context[restrict static 1],
+                                size_t out_x, size_t out_y) {
+  const size_t input_channels = context->input_channels;
+  const size_t output_channels = context->output_channels;
+  const struct nnp_size input_size = context->input_size;
+  const struct nnp_size output_size = context->output_size;
+  const size_t depthwise_multiplier = context->depthwise_multiplier;
+  const struct nnp_padding input_padding = context->input_padding;
+  const struct nnp_size kernel_size = context->kernel_size;
+  const struct nnp_size output_subsampling = context->output_subsampling;
+  const float *input = context->input;
+  const float *kernel = context->kernel;
+  const float *bias = context->bias;
+  float *output = context->output;
+  void *workspace_buffer = context->workspace_buffer;
+  size_t *workspace_size = context->workspace_size;
+  enum nnp_activation activation = context->activation;
+  micro_kernel_function kernel_function = context->kernel_function;
   float *output_pos = output + (out_y * output_size.width + out_x) * output_channels;
   memcpy(workspace_buffer, (void *)bias, *workspace_size);
   for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
@@ -243,14 +269,26 @@ enum nnp_status nnp_convolution_depthwise_inference(
   }
   micro_kernel_function kernel_function;
   select_micro_kernel(input_channels, depthwise_multiplier, &kernel_function);
-  for (size_t out_y = 0; out_y < output_size.height; out_y++) {
-    for (size_t out_x = 0; out_x < output_size.width; out_x++) {
-      per_output_pixel_inference(out_x, out_y, input_channels, output_channels, input_size,
-                                 output_size, depthwise_multiplier, input_padding, kernel_size,
-                                 output_subsampling, input, kernel, bias, output, memory_block,
-                                 &memory_size, activation, kernel_function);
-    }
-  }
+
+  struct per_output_pixel_context per_output_pixel_context = {
+      .input_channels = input_channels,
+      .output_channels = output_channels,
+      .input_size = input_size,
+      .output_size = output_size,
+      .depthwise_multiplier = depthwise_multiplier,
+      .input_padding = input_padding,
+      .kernel_size = kernel_size,
+      .output_subsampling = output_subsampling,
+      .input = input,
+      .kernel = kernel,
+      .bias = bias,
+      .output = output,
+      .workspace_buffer = memory_block,
+      .workspace_size = &memory_size,
+      .activation = activation,
+      .kernel_function = kernel_function};
+  pthreadpool_compute_2d(threadpool, (pthreadpool_function_2d_t)per_output_pixel_inference,
+                         &per_output_pixel_context, output_size.width, output_size.height);
 #else
   struct convolution_depthwise_output_context convolution_depthwise_output_context = {
       .input_channels = input_channels,
