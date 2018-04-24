@@ -64,7 +64,7 @@ static inline void nnp_depthwise_1_micro_kernel(const float *input, const float 
   for (; input_channel_index < input_channels; input_channel_index++) {
     const float input_s = *(input + input_channel_index);
     const float kernel_s = *(kernel + input_channel_index);
-    *(acc_buffer + input_channel_index) = input_s * kernel_s;
+    *(acc_buffer + input_channel_index) += input_s * kernel_s;
   }
 }
 
