@@ -241,7 +241,7 @@ enum nnp_status nnp_convolution_depthwise_inference(
     }
     memory_block = workspace_buffer;
   }
-  micro_kernel_function kernel_function;
+  micro_kernel_function *kernel_function;
   select_micro_kernel(input_channels, depthwise_multiplier, kernel_function);
   for (size_t out_y = 0; out_y < output_size.height; out_y++) {
     for (size_t out_x = 0; out_x < output_size.width; out_x++) {
