@@ -32,7 +32,8 @@ static inline void nnp_depthwise_micro_kernel(const float *input, const float *k
        depth_multiplier_index++) {
     size_t input_channel_index = 0;
     for (; input_channel_index < input_channels - simd_width; input_channel_index += simd_width) {
-      float *output_simd = acc_buffer + depth_multiplier_index * input_channels + input_channel_index;
+      float *output_simd =
+          acc_buffer + depth_multiplier_index * input_channels + input_channel_index;
       input_simd = vld1q_f32(input + input_channel_index);
       kernel_simd =
           vld1q_f32(kernel + depth_multiplier_index * input_channels + input_channel_index);
@@ -65,9 +66,10 @@ static void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_
                                        struct nnp_size kernel_size,
                                        struct nnp_size output_subsampling, const float *input,
                                        const float *kernel, const float *bias, float *output,
-                                       void *workspace_buffer, size_t *workspace_size) {
+                                       void *workspace_buffer, size_t *workspace_size,
+                                       enum nnp_activation activation) {
   float *output_pos = output + out_y * output_size.width + out_x;
-  memcpy(workspace_buffer, (void*)bias, workspace_size);
+  memcpy(workspace_buffer, (void *)bias, workspace_size);
   for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
     const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
     if (input_y < input_size.height) {
@@ -83,7 +85,28 @@ static void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_
       }
     }
   }
-  memcpy((void *)output_pos, workspace_buffer, workspace_size);
+  NNP_OUTPUT_TRANSFORM_START(profile)
+  switch (activation) {
+  case nnp_activation_identity:
+    memcpy((void *)output_pos, workspace_buffer, workspace_size);
+  case nnp_activation_relu:
+    size_t output_channel = 0;
+    float *local_output = output_pos;
+    for (; output_channel < output_channels; output_channel += simd_width) {
+      float32x4_t acc = vld1q_f32(workspace_buffer + output_channel);
+      acc = vmaxq_f32(vdupq_n_f32(0.f), acc);
+      vst1q_f32(local_output, acc);
+      local_output += simd_width;
+    }
+
+    for (; output_channel < output_channels; output_channel++) {
+      *local_output++ = relu(workspace_buffer + output_channel, 0.0f);
+    }
+
+  default:
+    NNP_UNREACHABLE;
+  }
+  NNP_OUTPUT_TRANSFORM_END(profile)
 }
 #else
 struct convolution_depthwise_output_context {
@@ -202,7 +225,8 @@ enum nnp_status nnp_convolution_depthwise_inference(
     for (size_t out_x = 0; out_x < output_size.width; out_x++) {
       per_output_pixel_inference(out_x, out_y, input_channels, output_channels, input_size,
                                  depth_multipler, input_padding, kernel_size, output_subsampling,
-                                 input, kernel, bias, output, memory_block, memory_size);
+                                 input, kernel, bias, output, memory_block, memory_size,
+                                 activation);
     }
   }
 #else
