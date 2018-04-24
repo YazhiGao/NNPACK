@@ -30,7 +30,7 @@ static inline void nnp_depthwise_1_micro_kernel(const float *input, const float 
   float32x2_t h_input_simd;
   float32x2_t h_kernel_simd;
   float32x2_t h_acc_simd;
-  size_t input_channel_index;
+  size_t input_channel_index = 0;
   for (; input_channel_index < input_channels - simd_width * 4;
        input_channel_index += simd_width * 4) {
     for (size_t i = 0; i < 4; i++) {
@@ -64,7 +64,7 @@ static inline void nnp_depthwise_1_micro_kernel(const float *input, const float 
   for (; input_channel_index < input_channels; input_channel_index++) {
     const float input_s = *(input + input_channel_index);
     const float kernel_s = *(kernel + input_channel_index);
-    *(acc_buffer + +input_channel_index) = input_s * kernel_s;
+    *(acc_buffer + input_channel_index) = input_s * kernel_s;
   }
 }
 
@@ -88,8 +88,8 @@ void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_channel
           const float *input_pos = input + (input_y * input_size.width + input_x) * input_channels;
           const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
                                                  input_channels * depthwise_multiplier;
-          kernel_function(input_pos, kernel_pos, (float *)workspace_buffer,
-                             depthwise_multiplier, input_channels);
+          kernel_function(input_pos, kernel_pos, (float *)workspace_buffer, depthwise_multiplier,
+                          input_channels);
         }
       }
     }
