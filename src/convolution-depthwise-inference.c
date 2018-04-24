@@ -79,7 +79,7 @@ void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_channel
       for (size_t filter_x = 0; filter_x < kernel_size.width; filter_x++) {
         const size_t input_x = out_x * output_subsampling.width + filter_x - input_padding.left;
         if (input_x < input_size.width) {
-          const float *input_pos = input + input_y * input_size.width + input_x;
+          const float *input_pos = input + (input_y * input_size.width + input_x) * input_channels;
           const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
                                                  input_channels * depth_multiplier;
           nnp_depthwise_micro_kernel(input_pos, kernel_pos, (float *)workspace_buffer,
