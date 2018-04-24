@@ -21,7 +21,8 @@
 #include <nnpack/macros.h>
 static inline void nnp_depthwise_micro_kernel(const float *input, const float *kernel,
                                               float *acc_buffer, size_t depth_multiplier,
-                                              size_t input_channels, size_t simd_width) {
+                                              size_t input_channels ) {
+size_t simd_width = nnp_hwinfo.simd_width;
   float32x4_t input_simd;
   float32x4_t kernel_simd;
   float32x4_t acc_simd;
@@ -46,7 +47,7 @@ static inline void nnp_depthwise_micro_kernel(const float *input, const float *k
          input_channel_index += h_simd_width) {
       float *h_output_simd =
           acc_buffer + depth_multiplier_index * input_channels + input_channel_index;
-      h_input_simd = vld1q_f32(input + input_channel_index);
+      h_input_simd = vld1_f32(input + input_channel_index);
       h_kernel_simd =
           vld1_f32(kernel + depth_multiplier_index * input_channels + input_channel_index);
       h_acc_simd = vld1_f32(h_output_simd);
@@ -54,14 +55,15 @@ static inline void nnp_depthwise_micro_kernel(const float *input, const float *k
       vst1_f32(h_output_simd, h_acc_simd);
     }
     for (; input_channel_index < input_channels; input_channel_index++) {
-      const float input_s = *(input+ input_channel_index;
+      const float input_s = *(input+ input_channel_index);
       const float kernel_s = *(kernel + depth_multiplier_index * input_channels + input_channel_index);
       *(acc_buffer+ depth_multiplier_index * input_channels + input_channel_index) = input_s* kernel_s;
     }
   }
 }
-static void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_channels,
+void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_channels,
                                        size_t output_channels, struct nnp_size input_size,
+				       struct nnp_size output_size,
                                        size_t depth_multiplier, struct nnp_padding input_padding,
                                        struct nnp_size kernel_size,
                                        struct nnp_size output_subsampling, const float *input,
@@ -69,7 +71,7 @@ static void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_
                                        void *workspace_buffer, size_t *workspace_size,
                                        enum nnp_activation activation) {
   float *output_pos = output + out_y * output_size.width + out_x;
-  memcpy(workspace_buffer, (void *)bias, workspace_size);
+  memcpy(workspace_buffer, (void *)bias, *workspace_size);
   for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
     const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
     if (input_y < input_size.height) {
@@ -80,28 +82,31 @@ static void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_
           const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
                                                  input_channels * depth_multiplier;
           nnp_depthwise_micro_kernel(input_pos, kernel_pos, (float *)workspace_buffer,
-                                     depth_multipler, input_channels);
+                                     depth_multiplier, input_channels);
         }
       }
     }
   }
+  size_t output_channel;
+	float *local_output = NULL;
   switch (activation) {
   case nnp_activation_identity:
-    memcpy((void *)output_pos, workspace_buffer, workspace_size);
+    memcpy((void *)output_pos, workspace_buffer, *workspace_size);
+	break;
   case nnp_activation_relu:
-    size_t output_channel = 0;
-    float *local_output = output_pos;
-    for (; output_channel < output_channels; output_channel += simd_width) {
+    output_channel = 0;
+    local_output = output_pos;
+    for (; output_channel < output_channels; output_channel += nnp_hwinfo.simd_width) {
       float32x4_t acc = vld1q_f32(workspace_buffer + output_channel);
       acc = vmaxq_f32(vdupq_n_f32(0.f), acc);
       vst1q_f32(local_output, acc);
-      local_output += simd_width;
+      local_output += nnp_hwinfo.simd_width;
     }
 
     for (; output_channel < output_channels; output_channel++) {
-      *local_output++ = relu(workspace_buffer + output_channel, 0.0f);
+      *local_output++ = relu(*((float*)workspace_buffer + output_channel), 0.0f);
     }
-
+	break;
   default:
     NNP_UNREACHABLE;
   }
@@ -221,9 +226,9 @@ enum nnp_status nnp_convolution_depthwise_inference(
   }
   for (size_t out_y = 0; out_y < output_size.height; out_y++) {
     for (size_t out_x = 0; out_x < output_size.width; out_x++) {
-      per_output_pixel_inference(out_x, out_y, input_channels, output_channels, input_size,
-                                 depth_multipler, input_padding, kernel_size, output_subsampling,
-                                 input, kernel, bias, output, memory_block, memory_size,
+      per_output_pixel_inference(out_x, out_y, input_channels, output_channels, input_size, output_size, 
+                                 depth_multiplier, input_padding, kernel_size, output_subsampling,
+                                 input, kernel, bias, output, memory_block, &memory_size,
                                  activation);
     }
   }
