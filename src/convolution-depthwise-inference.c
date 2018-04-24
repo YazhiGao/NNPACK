@@ -17,6 +17,8 @@
 // very naive implementation
 #include <nnpack/reference.h>
 #if NNP_BACKEND_ARM
+#include <nnpack/arm_neon.h>
+#include <nnpack/macros.h>
 static inline void nnp_depthwise_micro_kernel(const float *input, const float *kernel,
                                               float *acc_buffer, size_t depth_multiplier,
                                               size_t input_channels, size_t simd_width) {
@@ -30,7 +32,7 @@ static inline void nnp_depthwise_micro_kernel(const float *input, const float *k
        depth_multiplier_index++) {
     size_t input_channel_index = 0;
     for (; input_channel_index < input_channels - simd_width; input_channel_index += simd_width) {
-      float *out_simd = acc_buffer + depth_multiplier_index * input_channels + input_channel_index;
+      float *output_simd = acc_buffer + depth_multiplier_index * input_channels + input_channel_index;
       input_simd = vld1q_f32(input + input_channel_index);
       kernel_simd =
           vld1q_f32(kernel + depth_multiplier_index * input_channels + input_channel_index);
@@ -41,11 +43,11 @@ static inline void nnp_depthwise_micro_kernel(const float *input, const float *k
     size_t h_simd_width = simd_width / 2;
     for (; input_channel_index < input_channels - h_simd_width;
          input_channel_index += h_simd_width) {
-      float *h_out_simd =
+      float *h_output_simd =
           acc_buffer + depth_multiplier_index * input_channels + input_channel_index;
       h_input_simd = vld1q_f32(input + input_channel_index);
       h_kernel_simd =
-          vld1q_f32(kernel + depth_multiplier_index * input_channels + input_channel_index);
+          vld1_f32(kernel + depth_multiplier_index * input_channels + input_channel_index);
       h_acc_simd = vld1_f32(h_output_simd);
       h_acc_simd = vmla_f32(h_acc_simd, h_input_simd, h_kernel_simd);
       vst1_f32(h_output_simd, h_acc_simd);
@@ -69,9 +71,9 @@ static void per_output_pixel_inference(size_t out_x, size_t out_y, size_t input_
   for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
     const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
     if (input_y < input_size.height) {
-      for (size_t filter_x = 0; filter_x < kernel_size.width, filter_x++) {
+      for (size_t filter_x = 0; filter_x < kernel_size.width; filter_x++) {
         const size_t input_x = out_x * output_subsampling.width + filter_x - input_padding.left;
-        if (size_t input_x < input_size.width) {
+        if (input_x < input_size.width) {
           const float *input_pos = input + input_y * input_size.width + input_x;
           const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
                                                  input_channels * depth_multiplier;
