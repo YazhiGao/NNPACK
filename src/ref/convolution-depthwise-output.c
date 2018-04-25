@@ -2,7 +2,7 @@
 #include <nnpack/reference.h>
 
 struct convolution_depthwise_output_context {
-size_t batch_size;
+  size_t batch_size;
   size_t input_channels;
   size_t output_channels;
   size_t depthwise_multiplier;
@@ -18,7 +18,8 @@ size_t batch_size;
 };
 
 static void compute_convolution_depthwise_output(
-    const struct convolution_depthwise_output_context context[restrict static 1], size_t output_height, size_t output_width) {
+    const struct convolution_depthwise_output_context context[restrict static 1],
+    size_t output_height, size_t output_width) {
   const size_t batch_size = context->batch_size;
   const size_t input_channels = context->input_channels;
   const size_t output_channels = context->output_channels;
@@ -43,15 +44,15 @@ static void compute_convolution_depthwise_output(
   for (size_t b = 0; b < batch_size; b++) {
     for (size_t oc = 0; oc < output_channels; oc++) {
       float v = context->bias[oc];
-	size_t ic = oc/depthwise_multiplier;	
-	size_t d = oc%depthwise_multiplier;
+      size_t ic = oc / depthwise_multiplier;
+      size_t d = oc % depthwise_multiplier;
       for (size_t i = 0; i < kernel_size.height; i++) {
         const size_t s = output_height * output_subsampling.height + i - input_padding.top;
         if (s < input_size.height) {
           for (size_t j = 0; j < kernel_size.width; j++) {
             const size_t t = output_width * output_subsampling.width + j - input_padding.left;
             if (t < input_size.width) {
-                v += input[b][s][t][ic] * kernel[i][j][ic][d];
+              v += input[b][s][t][ic] * kernel[i][j][ic][d];
             }
           }
         }
@@ -75,7 +76,7 @@ void nnp_convolution_depthwise_output__reference(
               output_subsampling.height +
           1};
   struct convolution_depthwise_output_context convolution_depthwise_output_context = {
-	.batch_size = batch_size,
+      .batch_size = batch_size,
       .input_channels = input_channels,
       .output_channels = output_channels,
       .depthwise_multiplier = depthwise_multiplier,
@@ -89,7 +90,7 @@ void nnp_convolution_depthwise_output__reference(
       .bias = bias,
       .output_pointer = output_pointer};
 
-  pthreadpool_compute_2d(threadpool,
-                         (pthreadpool_function_2d_t)compute_convolution_depthwise_output,
-                         &convolution_depthwise_output_context, output_size.height, output_size.width);
+  pthreadpool_compute_2d(
+      threadpool, (pthreadpool_function_2d_t)compute_convolution_depthwise_output,
+      &convolution_depthwise_output_context, output_size.height, output_size.width);
 }
