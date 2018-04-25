@@ -8,7 +8,7 @@
 /*
  * MobileNet conv_dw layers
  */
-TEST(NAIVE_SOLUTION, convdw1) {
+TEST(NAIVE_SOLUTION, conv1_dw) {
   MobileNet::convdw1().errorLimit(1.0e-5).testDepthwiseInference(
       nnp_convolution_algorithm_implicit_gemm, nnp_activation_identity);
 }
