@@ -58,7 +58,7 @@ BENCHMARK_DEFINE_F(NNPACK, conv3x3)(benchmark::State &state) {
          matmul_share = 0.0;
   for (auto _ : state) {
     nnp_profile profile;
-    status = nnp_convolution_depthwise_inference(
+    nnp_status status = nnp_convolution_depthwise_inference(
         algorithm, strategy, inputChannels, outputChannels, imageSize2D, imagePadding,
         kernelSize2D, outputStride2D, input.data(), kernel.data(), bias.data(), output.data(),
         NULL, NULL, nnp_activation_identity, NULL, NULL, &profile);
