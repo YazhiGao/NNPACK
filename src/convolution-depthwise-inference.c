@@ -13,7 +13,7 @@
 #include <nnpack/activations.h>
 #include <nnpack/hwinfo.h>
 #include <nnpack/validation.h>
-
+#include <pthreadpool.h>
 #if NNP_BACKEND_ARM
 #include <nnpack/arm_neon.h>
 #include <nnpack/macros.h>
@@ -86,7 +86,7 @@ struct per_output_pixel_context {
 };
 
 void per_output_pixel_inference(const struct per_output_pixel_context context[restrict static 1],
-                                size_t out_x, size_t out_y) {
+                                size_t out_y_start, size_t out_y_step) {
   const size_t input_channels = context->input_channels;
   const size_t output_channels = context->output_channels;
   const struct nnp_size input_size = context->input_size;
@@ -99,49 +99,55 @@ void per_output_pixel_inference(const struct per_output_pixel_context context[re
   const float *kernel = context->kernel;
   const float *bias = context->bias;
   float *output = context->output;
-  void *workspace_buffer = context->workspace_buffer;
+  void *workspace_buffer = context->workspace_buffer + out_y_start / out_y_step * output_channels;
   size_t *workspace_size = context->workspace_size;
   enum nnp_activation activation = context->activation;
   micro_kernel_function kernel_function = context->kernel_function;
-  float *output_pos = output + (out_y * output_size.width + out_x) * output_channels;
-  memcpy(workspace_buffer, (void *)bias, *workspace_size);
-  for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
-    const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
-    if (input_y < input_size.height) {
-      for (size_t filter_x = 0; filter_x < kernel_size.width; filter_x++) {
-        const size_t input_x = out_x * output_subsampling.width + filter_x - input_padding.left;
-        if (input_x < input_size.width) {
-          const float *input_pos = input + (input_y * input_size.width + input_x) * input_channels;
-          const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
-                                                 input_channels * depthwise_multiplier;
-          kernel_function(input_pos, kernel_pos, (float *)workspace_buffer, depthwise_multiplier,
-                          input_channels);
+  for (size_t out_y = out_y_start; out_y < out_y_start + out_y_step; out_y++) {
+    for (size_t out_x = 0; out_x < output_size.width; out_x++) {
+      float *output_pos = output + (out_y * output_size.width + out_x) * output_channels;
+      memcpy(workspace_buffer, (void *)bias, *workspace_size);
+      for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
+        const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
+        if (input_y < input_size.height) {
+          for (size_t filter_x = 0; filter_x < kernel_size.width; filter_x++) {
+            const size_t input_x =
+                out_x * output_subsampling.width + filter_x - input_padding.left;
+            if (input_x < input_size.width) {
+              const float *input_pos =
+                  input + (input_y * input_size.width + input_x) * input_channels;
+              const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
+                                                     input_channels * depthwise_multiplier;
+              kernel_function(input_pos, kernel_pos, (float *)workspace_buffer,
+                              depthwise_multiplier, input_channels);
+            }
+          }
         }
       }
-    }
-  }
-  size_t output_channel;
-  float *local_output = NULL;
-  switch (activation) {
-  case nnp_activation_identity:
-    memcpy((void *)output_pos, workspace_buffer, *workspace_size);
-    break;
-  case nnp_activation_relu:
-    output_channel = 0;
-    local_output = output_pos;
-    for (; output_channel < output_channels; output_channel += nnp_hwinfo.simd_width) {
-      float32x4_t acc = vld1q_f32(workspace_buffer + output_channel);
-      acc = vmaxq_f32(vdupq_n_f32(0.f), acc);
-      vst1q_f32(local_output, acc);
-      local_output += nnp_hwinfo.simd_width;
-    }
+      size_t output_channel;
+      float *local_output = NULL;
+      switch (activation) {
+      case nnp_activation_identity:
+        memcpy((void *)output_pos, workspace_buffer, *workspace_size);
+        break;
+      case nnp_activation_relu:
+        output_channel = 0;
+        local_output = output_pos;
+        for (; output_channel < output_channels; output_channel += nnp_hwinfo.simd_width) {
+          float32x4_t acc = vld1q_f32(workspace_buffer + output_channel);
+          acc = vmaxq_f32(vdupq_n_f32(0.f), acc);
+          vst1q_f32(local_output, acc);
+          local_output += nnp_hwinfo.simd_width;
+        }
 
-    for (; output_channel < output_channels; output_channel++) {
-      *local_output++ = relu(*((float *)workspace_buffer + output_channel), 0.0f);
+        for (; output_channel < output_channels; output_channel++) {
+          *local_output++ = relu(*((float *)workspace_buffer + output_channel), 0.0f);
+        }
+        break;
+      default:
+        NNP_UNREACHABLE;
+      }
     }
-    break;
-  default:
-    NNP_UNREACHABLE;
   }
 }
 
@@ -249,11 +255,14 @@ enum nnp_status nnp_convolution_depthwise_inference(
           1};
   size_t depthwise_multiplier = output_channels / input_channels;
 #if NNP_BACKEND_ARM
+  size_t thread_cache_num = 1;
+  if (threadpool != NULL)
+    thread_cache_num = pthreadpool_get_threads_count(threadpool);
   size_t memory_size = output_channels * sizeof(float);
   void *memory_block = NULL;
   if (workspace_buffer == NULL) {
     if (workspace_size == NULL) {
-      memory_block = allocate_memory(memory_size);
+      memory_block = allocate_memory(memory_size * thread_cache_num);
       if (memory_block == NULL) {
         return nnp_status_out_of_memory;
       }
@@ -287,8 +296,11 @@ enum nnp_status nnp_convolution_depthwise_inference(
       .workspace_size = &memory_size,
       .activation = activation,
       .kernel_function = kernel_function};
-  pthreadpool_compute_2d(threadpool, (pthreadpool_function_2d_t)per_output_pixel_inference,
-                         &per_output_pixel_context, output_size.width, output_size.height);
+  size_t step =
+      output_size.height / thread_cache_num + (output_size.height % thread_cache_num) ? 1 : 0;
+  pthreadpool_compute_1d_tiled(threadpool,
+                               (pthreadpool_function_1d_tiled_t)per_output_pixel_inference,
+                               &per_output_pixel_context, output_size.height, step);
 #else
   struct convolution_depthwise_output_context convolution_depthwise_output_context = {
       .input_channels = input_channels,
