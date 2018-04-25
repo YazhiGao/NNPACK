@@ -99,7 +99,7 @@ void per_output_pixel_inference(const struct per_output_pixel_context context[re
   const float *kernel = context->kernel;
   const float *bias = context->bias;
   float *output = context->output;
-  void *workspace_buffer = context->workspace_buffer + out_y_start / out_y_step * output_channels;
+  void *workspace_buffer = context->workspace_buffer + out_y_start / out_y_step * output_channels*sizeof(float);
   size_t *workspace_size = context->workspace_size;
   enum nnp_activation activation = context->activation;
   micro_kernel_function kernel_function = context->kernel_function;
@@ -297,7 +297,7 @@ enum nnp_status nnp_convolution_depthwise_inference(
       .activation = activation,
       .kernel_function = kernel_function};
   size_t step =
-      output_size.height / thread_cache_num + (output_size.height % thread_cache_num) ? 1 : 0;
+      output_size.height / thread_cache_num + ((output_size.height % thread_cache_num) ? 1 : 0);
   pthreadpool_compute_1d_tiled(threadpool,
                                (pthreadpool_function_1d_tiled_t)per_output_pixel_inference,
                                &per_output_pixel_context, output_size.height, step);
