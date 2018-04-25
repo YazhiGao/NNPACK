@@ -79,8 +79,6 @@ struct per_output_pixel_context {
   const float *kernel;
   const float *bias;
   float *output;
-  void *workspace_buffer;
-  size_t *workspace_size;
   enum nnp_activation activation;
   micro_kernel_function kernel_function;
 };
@@ -99,14 +97,12 @@ void per_output_pixel_inference(const struct per_output_pixel_context context[re
   const float *kernel = context->kernel;
   const float *bias = context->bias;
   float *output = context->output;
-  void *workspace_buffer = context->workspace_buffer + out_y_start / out_y_step * output_channels*sizeof(float);
-  size_t *workspace_size = context->workspace_size;
   enum nnp_activation activation = context->activation;
   micro_kernel_function kernel_function = context->kernel_function;
   for (size_t out_y = out_y_start; out_y < out_y_start + out_y_step; out_y++) {
     for (size_t out_x = 0; out_x < output_size.width; out_x++) {
       float *output_pos = output + (out_y * output_size.width + out_x) * output_channels;
-      memcpy(workspace_buffer, (void *)bias, *workspace_size);
+      memcpy((void *)output_pos, (void *)bias, output_channels * sizeof(float));
       for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
         const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
         if (input_y < input_size.height) {
@@ -118,8 +114,8 @@ void per_output_pixel_inference(const struct per_output_pixel_context context[re
                   input + (input_y * input_size.width + input_x) * input_channels;
               const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
                                                      input_channels * depthwise_multiplier;
-              kernel_function(input_pos, kernel_pos, (float *)workspace_buffer,
-                              depthwise_multiplier, input_channels);
+              kernel_function(input_pos, kernel_pos, output_pos, depthwise_multiplier,
+                              input_channels);
             }
           }
         }
@@ -128,20 +124,19 @@ void per_output_pixel_inference(const struct per_output_pixel_context context[re
       float *local_output = NULL;
       switch (activation) {
       case nnp_activation_identity:
-        memcpy((void *)output_pos, workspace_buffer, *workspace_size);
         break;
       case nnp_activation_relu:
         output_channel = 0;
         local_output = output_pos;
         for (; output_channel < output_channels; output_channel += nnp_hwinfo.simd_width) {
-          float32x4_t acc = vld1q_f32(workspace_buffer + output_channel);
+          float32x4_t acc = vld1q_f32(output_pos + output_channel);
           acc = vmaxq_f32(vdupq_n_f32(0.f), acc);
           vst1q_f32(local_output, acc);
           local_output += nnp_hwinfo.simd_width;
         }
 
         for (; output_channel < output_channels; output_channel++) {
-          *local_output++ = relu(*((float *)workspace_buffer + output_channel), 0.0f);
+          *local_output++ = relu(*(output_pos + output_channel), 0.0f);
         }
         break;
       default:
@@ -255,27 +250,10 @@ enum nnp_status nnp_convolution_depthwise_inference(
           1};
   size_t depthwise_multiplier = output_channels / input_channels;
 #if NNP_BACKEND_ARM
+
   size_t thread_cache_num = 1;
   if (threadpool != NULL)
     thread_cache_num = pthreadpool_get_threads_count(threadpool);
-  size_t memory_size = output_channels * sizeof(float);
-  void *memory_block = NULL;
-  if (workspace_buffer == NULL) {
-    if (workspace_size == NULL) {
-      memory_block = allocate_memory(memory_size * thread_cache_num);
-      if (memory_block == NULL) {
-        return nnp_status_out_of_memory;
-      }
-    } else {
-      *workspace_size = memory_size;
-      return nnp_status_success;
-    }
-  } else {
-    if (*workspace_size < memory_size) {
-      return nnp_status_insufficient_buffer;
-    }
-    memory_block = workspace_buffer;
-  }
   micro_kernel_function kernel_function;
   select_micro_kernel(input_channels, depthwise_multiplier, &kernel_function);
 
@@ -292,8 +270,6 @@ enum nnp_status nnp_convolution_depthwise_inference(
       .kernel = kernel,
       .bias = bias,
       .output = output,
-      .workspace_buffer = memory_block,
-      .workspace_size = &memory_size,
       .activation = activation,
       .kernel_function = kernel_function};
   size_t step =
