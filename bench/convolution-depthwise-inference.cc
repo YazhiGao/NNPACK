@@ -110,5 +110,7 @@ BENCHMARK_REGISTER_F(NNPACK, conv3x3)
     ->Apply(ConvolutionSetup)
     ->Args({512, 512, 14, 2, 0, 1, 0, 1});
 // conv9
-BENCHMARK_REGISTER_F(NNPACK, conv3x3)->Apply(ConvolutionSetup)->Args({512, 512, 7, 2, 0, 1, 0, 1});
+BENCHMARK_REGISTER_F(NNPACK, conv3x3)
+    ->Apply(ConvolutionSetup)
+    ->Args({1024, 1024, 7, 2, 0, 1, 0, 1});
 BENCHMARK_MAIN();
