@@ -33,7 +33,7 @@ BENCHMARK_DEFINE_F(NNPACK, conv3x3)(benchmark::State &state) {
   const size_t pright = static_cast<size_t>(state.range(7));
 
   std::vector<float> input, kernel, output, bias;
-  std::vector<uint8_t, AlignedAllocator<uint8_t, 32>> transformedKernel, workspaceBuffer;
+  //  std::vector<uint8_t, AlignedAllocator<uint8_t, 32>> transformedKernel, workspaceBuffer;
   input.resize(inputChannels * imageSize * imageSize);
   kernel.resize(outputChannels * inputChannels);
   bias.resize(outputChannels);
@@ -46,13 +46,13 @@ BENCHMARK_DEFINE_F(NNPACK, conv3x3)(benchmark::State &state) {
   const nnp_size outputStride2D = {strideOut, strideOut};
   const nnp_padding imagePadding = {ptop, pbot, pleft, pright};
 
-  size_t workspaceSize = 0;
-  nnp_status status = nnp_convolution_depthwise_inference(
-      algorithm, strategy, inputChannels, outputChannels, imageSize2D, imagePadding, kernelSize2D,
-      outputStride2D, NULL, NULL, NULL, NULL, NULL, &workspaceSize, nnp_activation_identity, NULL,
-      NULL, NULL);
-  assert(status == nnp_status_success);
-  workspaceBuffer.resize(workspaceSize);
+  //  size_t workspaceSize = 0;
+  //  nnp_status status = nnp_convolution_depthwise_inference(
+  //      algorithm, strategy, inputChannels, outputChannels, imageSize2D, imagePadding,
+  //      kernelSize2D, outputStride2D, NULL, NULL, NULL, NULL, NULL, &workspaceSize,
+  //      nnp_activation_identity, NULL, NULL, NULL);
+  //  assert(status == nnp_status_success);
+  //  workspaceBuffer.resize(workspaceSize);
 
   double input_transform_share = 0.0, kernel_transform_share = 0.0, output_transform_share = 0.0,
          matmul_share = 0.0;
@@ -60,12 +60,8 @@ BENCHMARK_DEFINE_F(NNPACK, conv3x3)(benchmark::State &state) {
     nnp_profile profile;
     status = nnp_convolution_depthwise_inference(
         algorithm, strategy, inputChannels, outputChannels, imageSize2D, imagePadding,
-        kernelSize2D, outputStride2D, input.data(),
-        transformedKernel.empty()
-            ? kernel.data()
-            : static_cast<float *>(static_cast<void *>(transformedKernel.data())),
-        bias.data(), output.data(), workspaceBuffer.data(), &workspaceSize,
-        nnp_activation_identity, NULL, NULL, &profile);
+        kernelSize2D, outputStride2D, input.data(), kernel.data(), bias.data(), output.data(),
+        NULL, NULL, nnp_activation_identity, NULL, NULL, &profile);
     assert(status == nnp_status_success);
 
     input_transform_share += profile.input_transform;
