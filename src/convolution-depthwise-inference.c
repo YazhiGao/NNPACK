@@ -17,52 +17,55 @@
 #if NNP_BACKEND_ARM
 #include <nnpack/arm_neon.h>
 #include <nnpack/macros.h>
+#define output_channel_block_size 16
 typedef void (*micro_kernel_function)(const float *, const float *, float *, size_t, size_t);
-static inline void nnp_depthwise_1_micro_kernel(const float *input, const float *kernel,
-                                                float *acc_buffer, size_t depthwise_multiplier,
-                                                size_t input_channels) {
+static inline void nnp_depthwise_1_micro_kernel(
+    size_t out_x, size_t out_y, struct nnp_size output_size, struct nnp_size input_size,
+    struct nnp_size kernel_size, const float *input, const float *kernel, float *output,
+    size_t depthwise_multiplier, size_t input_channels) {
   size_t simd_width = nnp_hwinfo.simd_width;
-  float32x4_t input_simd[4];
-  float32x4_t kernel_simd[4];
-  float32x4_t acc_simd[4];
-  float32x2_t h_input_simd;
-  float32x2_t h_kernel_simd;
-  float32x2_t h_acc_simd;
-  size_t input_channel_index = 0;
-  for (; input_channel_index < input_channels - simd_width * 4;
-       input_channel_index += simd_width * 4) {
-    for (size_t i = 0; i < 4; i++) {
-      size_t offset = input_channel_index + 4 * i;
-      float *output_simd = acc_buffer + offset;
-      input_simd[i] = vld1q_f32(input + offset);
-      kernel_simd[i] = vld1q_f32(kernel + offset);
-      acc_simd[i] = vld1q_f32(output_simd);
-      acc_simd[i] = vmlaq_f32(acc_simd[i], input_simd[i], kernel_simd[i]);
-      vst1q_f32(output_simd, acc_simd[i]);
+  size_t output_channels = input_channels * depthwise_multiplier;
+  float *output_pos = output + (out_y * output_size.width + out_x) * output_channels;
+  register float32x4_t t1, t2, t3, t4;
+  for (size_t b = 0; b < output_channels / output_channel_block_size; b++) {
+    size_t channel_offset = b * output_channel_block_size;
+    float *cur_bias = (float *)bias + channel_offset;
+    t1 = vld1q_f32(cur_bias);
+    t2 = vld1q_f32(cur_bias + 4);
+    t3 = vld1q_f32(cur_bias + 8);
+    t4 = vld1q_f32(cur_bias + 12);
+    float32x4_t input_simd, kernel_simd;
+    for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
+      const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
+      if (input_y < input_size.height) {
+        for (size_t filter_x = 0; filter_x < kernel_size.width; filter_x++) {
+          const size_t input_x = out_x * output_subsampling.width + filter_x - input_padding.left;
+          if (input_x < input_size.width) {
+            const float *input_pos =
+                input + (input_y * input_size.width + input_x) * input_channels;
+            const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
+                                                   input_channels * depthwise_multiplier;
+            input_simd = vld1q_f32(input_pos);
+            kernel_simd = vld1_f32(kernel_pos);
+            t1 = vmlaq_f32(t1, input_simd, kernel_simd);
+            input_simd = vld1q_f32(input_pos + 4);
+            kernel_simd = vld1_f32(kernel_pos + 4);
+            t2 = vmlaq_f32(t2, input_simd, kernel_simd);
+            input_simd = vld1q_f32(input_pos + 8);
+            kernel_simd = vld1_f32(kernel_pos + 8);
+            t3 = vmlaq_f32(t3, input_simd, kernel_simd);
+            input_simd = vld1q_f32(input_pos + 12);
+            kernel_simd = vld1_f32(kernel_pos + 12);
+            t4 = vmlaq_f32(t4, input_simd, kernel_simd);
+          }
+        }
+      }
     }
-  }
-  for (; input_channel_index < input_channels - simd_width; input_channel_index += simd_width) {
-    float *output_simd = acc_buffer + input_channel_index;
-    input_simd[0] = vld1q_f32(input + input_channel_index);
-    kernel_simd[0] = vld1q_f32(kernel + input_channel_index);
-    acc_simd[0] = vld1q_f32(output_simd);
-    acc_simd[0] = vmlaq_f32(acc_simd[0], input_simd[0], kernel_simd[0]);
-    vst1q_f32(output_simd, acc_simd[0]);
-  }
-  size_t h_simd_width = simd_width / 2;
-  for (; input_channel_index < input_channels - h_simd_width;
-       input_channel_index += h_simd_width) {
-    float *h_output_simd = acc_buffer + input_channel_index;
-    h_input_simd = vld1_f32(input + input_channel_index);
-    h_kernel_simd = vld1_f32(kernel + input_channel_index);
-    h_acc_simd = vld1_f32(h_output_simd);
-    h_acc_simd = vmla_f32(h_acc_simd, h_input_simd, h_kernel_simd);
-    vst1_f32(h_output_simd, h_acc_simd);
-  }
-  for (; input_channel_index < input_channels; input_channel_index++) {
-    const float input_s = *(input + input_channel_index);
-    const float kernel_s = *(kernel + input_channel_index);
-    *(acc_buffer + input_channel_index) += input_s * kernel_s;
+    float *cur_output_pos = output_pos + channel_offset;
+    vst1q_f32(cur_output_pos, t1);
+    vst1q_f32(cur_output_pos + 4, t2);
+    vst1q_f32(cur_output_pos + 8, t3);
+    vst1q_f32(cur_output_pos + 12, t4);
   }
 }
 
@@ -101,25 +104,6 @@ void per_output_pixel_inference(const struct per_output_pixel_context context[re
   micro_kernel_function kernel_function = context->kernel_function;
   for (size_t out_y = out_y_start; out_y < out_y_start + out_y_step; out_y++) {
     for (size_t out_x = 0; out_x < output_size.width; out_x++) {
-      float *output_pos = output + (out_y * output_size.width + out_x) * output_channels;
-      memcpy((void *)output_pos, (void *)bias, output_channels * sizeof(float));
-      for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
-        const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
-        if (input_y < input_size.height) {
-          for (size_t filter_x = 0; filter_x < kernel_size.width; filter_x++) {
-            const size_t input_x =
-                out_x * output_subsampling.width + filter_x - input_padding.left;
-            if (input_x < input_size.width) {
-              const float *input_pos =
-                  input + (input_y * input_size.width + input_x) * input_channels;
-              const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
-                                                     input_channels * depthwise_multiplier;
-              kernel_function(input_pos, kernel_pos, output_pos, depthwise_multiplier,
-                              input_channels);
-            }
-          }
-        }
-      }
       size_t output_channel;
       float *local_output = NULL;
       switch (activation) {
