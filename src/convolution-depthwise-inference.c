@@ -109,6 +109,7 @@ void per_output_pixel_inference(const struct per_output_pixel_context context[re
   micro_kernel_function kernel_function = context->kernel_function;
   for (size_t out_y = out_y_start; out_y < out_y_start + out_y_step; out_y++) {
     for (size_t out_x = 0; out_x < output_size.width; out_x++) {
+      float *output_pos = output + (out_y * output_size.width + out_x) * output_channels;
       kernel_function(out_x, out_y, output_size, input_size, kernel_size, input_padding,
                       output_subsampling, bias, input, kernel, output, depthwise_multiplier,
                       input_channels);
