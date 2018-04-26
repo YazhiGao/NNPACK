@@ -19,17 +19,19 @@
 #include <nnpack/macros.h>
 #define output_channel_block_size 16
 typedef void (*micro_kernel_function)(const float *, const float *, float *, size_t, size_t);
-static inline void nnp_depthwise_1_micro_kernel(
-    size_t out_x, size_t out_y, struct nnp_size output_size, struct nnp_size input_size,
-    struct nnp_size kernel_size, const float *input, const float *kernel, float *output,
-    size_t depthwise_multiplier, size_t input_channels) {
+static inline void
+nnp_depthwise_1_micro_kernel(size_t out_x, size_t out_y, struct nnp_size output_size,
+                             struct nnp_size input_size, struct nnp_size kernel_size,
+                             struct nnp_padding output_subsampling, const float *bias,
+                             const float *input, const float *kernel, float *output,
+                             size_t depthwise_multiplier, size_t input_channels) {
   size_t simd_width = nnp_hwinfo.simd_width;
   size_t output_channels = input_channels * depthwise_multiplier;
   float *output_pos = output + (out_y * output_size.width + out_x) * output_channels;
   register float32x4_t t1, t2, t3, t4;
   for (size_t b = 0; b < output_channels / output_channel_block_size; b++) {
     size_t channel_offset = b * output_channel_block_size;
-    float *cur_bias = (float *)bias + channel_offset;
+    float *cur_bias = bias + channel_offset;
     t1 = vld1q_f32(cur_bias);
     t2 = vld1q_f32(cur_bias + 4);
     t3 = vld1q_f32(cur_bias + 8);
@@ -104,6 +106,8 @@ void per_output_pixel_inference(const struct per_output_pixel_context context[re
   micro_kernel_function kernel_function = context->kernel_function;
   for (size_t out_y = out_y_start; out_y < out_y_start + out_y_step; out_y++) {
     for (size_t out_x = 0; out_x < output_size.width; out_x++) {
+      kernel_function(out_x, out_y, output_size, input_size, kernel_size, output_subsampling, bias,
+                      input, kernel, output, depthwise_multiplier, input_channels);
       size_t output_channel;
       float *local_output = NULL;
       switch (activation) {
