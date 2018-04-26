@@ -18,7 +18,10 @@
 #include <nnpack/arm_neon.h>
 #include <nnpack/macros.h>
 #define output_channel_block_size 16
-typedef void (*micro_kernel_function)(const float *, const float *, float *, size_t, size_t);
+typedef void (*micro_kernel_function)(size_t, size_t, struct nnp_size, struct nnp_size,
+                                      struct nnp_size, struct nnp_padding, struct nnp_size,
+                                      const float *, const float *, const float *, float *, size_t,
+                                      size_t);
 static inline void
 nnp_depthwise_1_micro_kernel(size_t out_x, size_t out_y, struct nnp_size output_size,
                              struct nnp_size input_size, struct nnp_size kernel_size,
