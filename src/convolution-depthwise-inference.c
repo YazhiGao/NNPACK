@@ -17,7 +17,8 @@
 #if NNP_BACKEND_ARM
 #include <nnpack/arm_neon.h>
 #include <nnpack/macros.h>
-#define output_channel_block_size 16
+// Assume that the output channel can be evenly divided by this block size
+#define output_channel_block_size 32
 typedef void (*micro_kernel_function)(size_t, size_t, struct nnp_size, struct nnp_size,
                                       struct nnp_size, struct nnp_padding, struct nnp_size,
                                       const float *, const float *, const float *, float *, size_t,
@@ -30,7 +31,7 @@ nnp_depthwise_1_micro_kernel(size_t out_x, size_t out_y, struct nnp_size output_
                              float *output, size_t depthwise_multiplier, size_t input_channels) {
   size_t output_channels = input_channels * depthwise_multiplier;
   float *output_pos = output + (out_y * output_size.width + out_x) * output_channels;
-  register float32x4_t t1, t2, t3, t4;
+  register float32x4_t t1, t2, t3, t4, t5, t6, t7, t8;
   for (size_t b = 0; b < output_channels / output_channel_block_size; b++) {
     size_t channel_offset = b * output_channel_block_size;
     const float *cur_bias = bias + channel_offset;
@@ -38,6 +39,10 @@ nnp_depthwise_1_micro_kernel(size_t out_x, size_t out_y, struct nnp_size output_
     t2 = vld1q_f32(cur_bias + 4);
     t3 = vld1q_f32(cur_bias + 8);
     t4 = vld1q_f32(cur_bias + 12);
+    t5 = vld1q_f32(cur_bias + 16);
+    t6 = vld1q_f32(cur_bias + 20);
+    t7 = vld1q_f32(cur_bias + 24);
+    t8 = vld1q_f32(cur_bias + 28);
     float32x4_t input_simd, kernel_simd;
     for (size_t filter_y = 0; filter_y < kernel_size.height; filter_y++) {
       const size_t input_y = out_y * output_subsampling.height + filter_y - input_padding.top;
@@ -61,6 +66,18 @@ nnp_depthwise_1_micro_kernel(size_t out_x, size_t out_y, struct nnp_size output_
             input_simd = vld1q_f32(input_pos + 12);
             kernel_simd = vld1q_f32(kernel_pos + 12);
             t4 = vmlaq_f32(t4, input_simd, kernel_simd);
+            input_simd = vld1q_f32(input_pos + 16);
+            kernel_simd = vld1q_f32(kernel_pos + 16);
+            t5 = vmlaq_f32(t5, input_simd, kernel_simd);
+            input_simd = vld1q_f32(input_pos + 20);
+            kernel_simd = vld1q_f32(kernel_pos + 20);
+            t6 = vmlaq_f32(t6, input_simd, kernel_simd);
+            input_simd = vld1q_f32(input_pos + 24);
+            kernel_simd = vld1q_f32(kernel_pos + 24);
+            t7 = vmlaq_f32(t7, input_simd, kernel_simd);
+            input_simd = vld1q_f32(input_pos + 28);
+            kernel_simd = vld1q_f32(kernel_pos + 28);
+            t8 = vmlaq_f32(t8, input_simd, kernel_simd);
           }
         }
       }
