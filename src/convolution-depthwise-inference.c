@@ -28,7 +28,6 @@ nnp_depthwise_1_micro_kernel(size_t out_x, size_t out_y, struct nnp_size output_
                              struct nnp_padding input_padding, struct nnp_size output_subsampling,
                              const float *bias, const float *input, const float *kernel,
                              float *output, size_t depthwise_multiplier, size_t input_channels) {
-  size_t simd_width = nnp_hwinfo.simd_width;
   size_t output_channels = input_channels * depthwise_multiplier;
   float *output_pos = output + (out_y * output_size.width + out_x) * output_channels;
   register float32x4_t t1, t2, t3, t4;
@@ -47,9 +46,9 @@ nnp_depthwise_1_micro_kernel(size_t out_x, size_t out_y, struct nnp_size output_
           const size_t input_x = out_x * output_subsampling.width + filter_x - input_padding.left;
           if (input_x < input_size.width) {
             const float *input_pos =
-                input + (input_y * input_size.width + input_x) * input_channels;
+                input + (input_y * input_size.width + input_x) * input_channels + channel_offset;
             const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
-                                                   input_channels * depthwise_multiplier;
+                                                   input_channels * depthwise_multiplier + channel_offset;
             input_simd = vld1q_f32(input_pos);
             kernel_simd = vld1q_f32(kernel_pos);
             t1 = vmlaq_f32(t1, input_simd, kernel_simd);
