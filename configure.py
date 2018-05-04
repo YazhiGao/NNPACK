@@ -79,7 +79,6 @@ def main(args):
             ]
 
         if backend == "x86_64":
-            nnpack_objects += [build.cc("convolution-depthwise-inference.c")]
             arch_nnpack_objects = [
                 # Transformations
                 build.peachpy("x86_64-fma/2d-fourier-8x8.py"),
@@ -377,8 +376,9 @@ def main(args):
             reference_layer_objects + [build.cxx("convolution-inference/vgg-a.cc")])
         build.unittest("convolution-inference-overfeat-fast-test",
             reference_layer_objects + [build.cxx("convolution-inference/overfeat-fast.cc")])
-        build.smoketest("convolution-depthwise-inference-mobilenet-test",
-            reference_layer_objects + [build.cxx("convolution-depthwise-inference/mobilenet.cc")])
+        if build.target.is_arm:
+            build.smoketest("convolution-depthwise-inference-mobilenet-test",
+                reference_layer_objects + [build.cxx("convolution-depthwise-inference/mobilenet.cc")])
         if not options.convolution_only:
             build.unittest("fully-connected-inference-alexnet-test",
                 reference_layer_objects + [build.cxx("fully-connected-inference/alexnet.cc")])
@@ -430,7 +430,8 @@ def main(args):
             "rt": build.target.is_linux}):
 
         build.benchmark("convolution-inference-bench", build.cxx("convolution-inference.cc"))
-        build.benchmark("convolution-depthwise-inference-bench", build.cxx("convolution-depthwise-inference.cc"))
+        if build.target.is_arm:
+            build.benchmark("convolution-depthwise-inference-bench", build.cxx("convolution-depthwise-inference.cc"))
         build.benchmark("sgemm-bench", build.cxx("sgemm.cc"))
         build.benchmark("sxgemm-bench", build.cxx("sxgemm.cc"))
 
