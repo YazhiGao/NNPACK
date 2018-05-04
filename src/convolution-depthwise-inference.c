@@ -52,8 +52,10 @@ nnp_depthwise_1_micro_kernel(size_t out_x, size_t out_y, struct nnp_size output_
           if (input_x < input_size.width) {
             const float *input_pos =
                 input + (input_y * input_size.width + input_x) * input_channels + channel_offset;
-            const float *kernel_pos = kernel + (filter_y * kernel_size.width + filter_x) *
-                                                   input_channels * depthwise_multiplier + channel_offset;
+            const float *kernel_pos =
+                kernel +
+                (filter_y * kernel_size.width + filter_x) * input_channels * depthwise_multiplier +
+                channel_offset;
             input_simd = vld1q_f32(input_pos);
             kernel_simd = vld1q_f32(kernel_pos);
             t1 = vmlaq_f32(t1, input_simd, kernel_simd);
@@ -90,7 +92,7 @@ nnp_depthwise_1_micro_kernel(size_t out_x, size_t out_y, struct nnp_size output_
   }
 }
 
-struct per_output_pixel_context {
+struct NNP_CACHE_ALIGN per_output_pixel_context {
   size_t input_channels;
   size_t output_channels;
   struct nnp_size input_size;
