@@ -30,6 +30,16 @@ void nnp_convolution_depthwise_output_reference(
           (input_padding.top + input_size.height + input_padding.bottom - kernel_size.height) /
               output_subsampling.height +
           1};
+  const float(*input)[input_channels][input_size.height][input_size.width] =
+      (const float(*)[input_channels][input_size.height][input_size.width])
+          input_pointer;
+  const float(
+      *kernel)[depthwise_multiplier][kernel_size.height][kernel_size.width] =
+      (const float(*)[depthwise_multiplier][kernel_size.height]
+                     [kernel_size.width])kernel_pointer;
+  float(*output)[output_channels][output_size.height][output_size.width] =
+      (float(*)[output_channels][output_size.height][output_size.width])
+          output_pointer;
   for (size_t b = 0; b < batch_size; b++) {
     for (size_t output_channel = 0; output_channel < output_channels; output_channel++) {
       size_t depthwise_channel = output_channel % depthwise_multiplier;
@@ -43,13 +53,13 @@ void nnp_convolution_depthwise_output_reference(
               for (size_t j = 0; j < kernel_size.width; j++) {
                 const size_t t = x * output_subsampling.width + j - input_padding.left;
                 if (t < input_size.width) {
-                  v += input[sample][input_channel][s][t] *
+                  v += input[b][input_channel][s][t] *
                        kernel[input_channel][depthwise_channel][i][j];
                 }
               }
             }
           }
-          output[b][output_channel][y][x] = v + context->bias[output_channel];
+          output[b][output_channel][y][x] = v + bias[output_channel];
         }
       }
     }
