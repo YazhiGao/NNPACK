@@ -32,7 +32,8 @@ BENCHMARK_DEFINE_F(NNPACK, conv3x3)(benchmark::State &state) {
   const size_t pleft = static_cast<size_t>(state.range(6));
   const size_t pright = static_cast<size_t>(state.range(7));
 
-  std::vector<float> input, kernel, output, bias;
+  std::vector<float> input, output, bias;
+  std::vector<float, AlignedAllocator<float, 32>> kernel;
   //  std::vector<uint8_t, AlignedAllocator<uint8_t, 32>> transformedKernel, workspaceBuffer;
   input.resize(inputChannels * imageSize * imageSize);
   kernel.resize(outputChannels * inputChannels);
