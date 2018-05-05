@@ -88,6 +88,10 @@ nnp_depthwise_1_micro_kernel(size_t out_x, size_t out_y, struct nnp_size output_
     vst1q_f32(cur_output_pos + 4, t2);
     vst1q_f32(cur_output_pos + 8, t3);
     vst1q_f32(cur_output_pos + 12, t4);
+    vst1q_f32(cur_output_pos + 16, t5);
+    vst1q_f32(cur_output_pos + 20, t6);
+    vst1q_f32(cur_output_pos + 24, t7);
+    vst1q_f32(cur_output_pos + 28, t8);
   }
 }
 
