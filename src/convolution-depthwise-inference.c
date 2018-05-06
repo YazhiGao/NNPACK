@@ -78,7 +78,7 @@ static void compute_convolution_depthwise_output(
   }
 }
 
-void nnp_convolution_depthwise_output__reference(
+void nnp_convolution_depthwise_output_reference(
     size_t batch_size, size_t input_channels, size_t output_channels,
     size_t depthwise_multiplier, struct nnp_size input_size,
     struct nnp_padding input_padding, struct nnp_size kernel_size,
@@ -150,7 +150,7 @@ enum nnp_status nnp_convolution_depthwise_inference(
                     output_subsampling.height +
                 1};
 
-  nnp_convolution_depthwise_output__reference(
+  nnp_convolution_depthwise_output_reference(
       1, input_channels, output_channels, output_channels / input_channels,
       input_size, input_padding, kernel_size, output_subsampling, input, kernel,
       bias, output, threadpool);
