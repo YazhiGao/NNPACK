@@ -32,7 +32,8 @@ BENCHMARK_DEFINE_F(NNPACK, conv3x3)(benchmark::State &state) {
   const size_t pleft = static_cast<size_t>(state.range(6));
   const size_t pright = static_cast<size_t>(state.range(7));
 
-  //std::vector<float> input, output, bias;
+  pthreadpool_t pthreadpool = pthreadpool_create(0);
+  // std::vector<float> input, output, bias;
   std::vector<float, AlignedAllocator<float, 32>> kernel, input, output, bias;
   //  std::vector<uint8_t, AlignedAllocator<uint8_t, 32>> transformedKernel, workspaceBuffer;
   input.resize(inputChannels * imageSize * imageSize);
@@ -62,7 +63,7 @@ BENCHMARK_DEFINE_F(NNPACK, conv3x3)(benchmark::State &state) {
     nnp_status status = nnp_convolution_depthwise_inference(
         algorithm, strategy, inputChannels, outputChannels, imageSize2D, imagePadding,
         kernelSize2D, outputStride2D, input.data(), kernel.data(), bias.data(), output.data(),
-        NULL, NULL, nnp_activation_identity, NULL, NULL, &profile);
+        NULL, NULL, nnp_activation_identity, NULL, pthreadpool, &profile);
     assert(status == nnp_status_success);
 
     input_transform_share += profile.input_transform;
@@ -77,6 +78,7 @@ BENCHMARK_DEFINE_F(NNPACK, conv3x3)(benchmark::State &state) {
 
   state.SetItemsProcessed(state.iterations() * imageSize * imageSize * inputChannels *
                           outputChannels);
+  pthreadpool_destroy(pthreadpool);
 }
 // conv1
 BENCHMARK_REGISTER_F(NNPACK, conv3x3)->Apply(ConvolutionSetup)->Args({32, 32, 112, 1, 1, 1, 1, 1});
