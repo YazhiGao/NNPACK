@@ -95,7 +95,7 @@ BENCHMARK_REGISTER_F(NNPACK, conv3x3)
 // conv5
 BENCHMARK_REGISTER_F(NNPACK, conv3x3)
     ->Apply(ConvolutionSetup)
-    ->Args({128, 128, 56, 1, 1, 1, 1, 1});
+    ->Args({128, 128, 28, 1, 1, 1, 1, 1});
 // conv6
 BENCHMARK_REGISTER_F(NNPACK, conv3x3)
     ->Apply(ConvolutionSetup)
