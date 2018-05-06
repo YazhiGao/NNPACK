@@ -34,7 +34,7 @@ void run(const size_t inputChannels, const size_t outputChannels, const size_t i
 
   double duration = read_timer() - start;
   long items = iters * imageSize * imageSize * outputChannels;
-  printf("Time used:%lf, item processed:%ld, speed:%lfG/s\n", duration, items, items/duration/1e6);  
+  printf("Time used:%lf, item processed:%ld, speed:%lfG/s\n", duration, items, items/duration/(1<<20));  
   fflush(stdout);
 }
 
