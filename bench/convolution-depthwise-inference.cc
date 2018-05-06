@@ -33,6 +33,7 @@ BENCHMARK_DEFINE_F(NNPACK, conv3x3)(benchmark::State &state) {
   const size_t pleft = static_cast<size_t>(state.range(6));
   const size_t pright = static_cast<size_t>(state.range(7));
 
+  pthreadpool_t pthreadpool = pthreadpool_create(0);
   std::vector<float> input, kernel, output, bias;
   std::vector<uint8_t, AlignedAllocator<uint8_t, 32>> transformedKernel,
       workspaceBuffer;
@@ -69,7 +70,7 @@ BENCHMARK_DEFINE_F(NNPACK, conv3x3)(benchmark::State &state) {
                                   : static_cast<float *>(static_cast<void *>(
                                         transformedKernel.data())),
         bias.data(), output.data(), workspaceBuffer.data(), &workspaceSize,
-        nnp_activation_identity, NULL, NULL, &profile);
+        nnp_activation_identity, NULL, pthreadpool, &profile);
     assert(status == nnp_status_success);
 
     input_transform_share += profile.input_transform;
@@ -88,6 +89,7 @@ BENCHMARK_DEFINE_F(NNPACK, conv3x3)(benchmark::State &state) {
 
   state.SetItemsProcessed(state.iterations() * imageSize * imageSize *
                           inputChannels * outputChannels);
+  pthreadpool_destroy(pthreadpool);
 }
 // conv1
 BENCHMARK_REGISTER_F(NNPACK, conv3x3)
