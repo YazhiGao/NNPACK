@@ -53,8 +53,7 @@ def main(args):
 
         nnpack_objects = [
             build.cc("init.c"),
-            build.cc("convolution-inference.c"),
-            build.cc("convolution-depthwise-inference.c")
+            build.cc("convolution-inference.c")
         ]
         if not options.convolution_only:
             # Fully-connected, pooling, Softmax, ReLU layers
@@ -139,6 +138,7 @@ def main(args):
         elif backend == "arm":
             from confu import arm
             with build.options(isa=arm.neon+arm.fp16 if options.target.is_arm else None):
+                nnpack_objects += [build.cc("convolution-depthwise-inference.c")]
                 arch_nnpack_objects = [
                     # Transformations
                     build.cc("psimd/2d-fourier-8x8.c"),
@@ -376,8 +376,9 @@ def main(args):
             reference_layer_objects + [build.cxx("convolution-inference/vgg-a.cc")])
         build.unittest("convolution-inference-overfeat-fast-test",
             reference_layer_objects + [build.cxx("convolution-inference/overfeat-fast.cc")])
-        build.smoketest("convolution-depthwise-inference-mobilenet-test",
-            reference_layer_objects + [build.cxx("convolution-depthwise-inference/mobilenet.cc")])
+        if build.target.is_arm:
+            build.smoketest("convolution-depthwise-inference-mobilenet-test",
+                reference_layer_objects + [build.cxx("convolution-depthwise-inference/mobilenet.cc")])
         if not options.convolution_only:
             build.unittest("fully-connected-inference-alexnet-test",
                 reference_layer_objects + [build.cxx("fully-connected-inference/alexnet.cc")])
@@ -429,6 +430,8 @@ def main(args):
             "rt": build.target.is_linux}):
 
         build.benchmark("convolution-inference-bench", build.cxx("convolution-inference.cc"))
+        if build.target.is_arm:
+            build.benchmark("convolution-depthwise-inference-bench", build.cxx("convolution-depthwise-inference.cc"))
         build.benchmark("sgemm-bench", build.cxx("sgemm.cc"))
         build.benchmark("sxgemm-bench", build.cxx("sxgemm.cc"))
 
